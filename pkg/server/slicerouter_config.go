@@ -1,8 +1,8 @@
 package server
 
 import (
-	"bitbucket.org/realtimeai/kubeslice-router-sidecar/logger"
-	sidecar "bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/proto"
+	"bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/logger"
+	sidecar "bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/sidecar/sidecarpb"
 	"context"
 	"net"
 	"os"

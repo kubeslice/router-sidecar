@@ -1,7 +1,9 @@
 package main
 
 import (
-	sidecar "bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/proto"
+	"bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/logger"
+	"bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/server"
+	sidecar "bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/sidecar/sidecarpb"
 	"fmt"
 	"google.golang.org/grpc"
 	"net"
@@ -9,9 +11,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-
-	"bitbucket.org/realtimeai/kubeslice-router-sidecar/logger"
-	slicectl "bitbucket.org/realtimeai/kubeslice-router-sidecar/server"
 )
 
 // startGrpcServer shall start the GRPC server to communicate to Slice Controller
@@ -26,7 +25,7 @@ func startGrpcServer(grpcPort string) error {
 	}
 
 	srv := grpc.NewServer()
-	sidecar.RegisterSliceRouterSidecarServiceServer(srv, &slicectl.SliceRouterSidecar{})
+	sidecar.RegisterSliceRouterSidecarServiceServer(srv, &server.SliceRouterSidecar{})
 	err = srv.Serve(lis)
 	if err != nil {
 		logger.GlobalLogger.Errorf("Start GRPC Server Failed with %v", err.Error())
@@ -74,7 +73,7 @@ func main() {
 	// Create a Logger Module
 	logger.GlobalLogger = logger.NewLogger(logLevel)
 
-	err := slicectl.BootstrapSliceRouterPod()
+	err := server.BootstrapSliceRouterPod()
 	if err != nil {
 		logger.GlobalLogger.Errorf("Failed to bootstrap Kubeslice-router-sidecar pod")
 	}
