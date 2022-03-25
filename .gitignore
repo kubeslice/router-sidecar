@@ -9,12 +9,15 @@ dist/
 
 # Compiled Java class files
 *.class
-
+kubeslice-router-sidecar
 # Compiled Python bytecode
 *.py[cod]
 
 # Log files
 *.log
+
+# Diff files
+*.diff
 
 # Package files
 *.jar
