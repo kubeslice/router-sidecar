@@ -1,1 +1,1 @@
-# kubeslice-router-sidecar
+# router-sidecar
