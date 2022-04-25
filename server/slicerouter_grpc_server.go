@@ -20,8 +20,8 @@ package server
 import (
 	"context"
 
-	"github.com/aveshasystems/kubeslice-router-sidecar/logger"
-	router "github.com/aveshasystems/kubeslice-router-sidecar/pkg/proto"
+	"github.com/kubeslice/router-sidecar/logger"
+	router "github.com/kubeslice/router-sidecar/pkg/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"

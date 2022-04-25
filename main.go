@@ -25,11 +25,11 @@ import (
 	"sync"
 	"syscall"
 
-	sidecar "github.com/aveshasystems/kubeslice-router-sidecar/pkg/proto"
+	sidecar "github.com/kubeslice/router-sidecar/pkg/proto"
 	"google.golang.org/grpc"
 
-	"github.com/aveshasystems/kubeslice-router-sidecar/logger"
-	slicectl "github.com/aveshasystems/kubeslice-router-sidecar/server"
+	"github.com/kubeslice/router-sidecar/logger"
+	slicectl "github.com/kubeslice/router-sidecar/server"
 )
 
 // startGrpcServer shall start the GRPC server to communicate to Slice Controller

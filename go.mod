@@ -1,4 +1,4 @@
-module github.com/aveshasystems/kubeslice-router-sidecar
+module github.com/kubeslice/router-sidecar
 
 go 1.17
 
