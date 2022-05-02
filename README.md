@@ -16,14 +16,11 @@ It is strongly recommended to use a released version.
   cluster 
 * [`kubectl`](https://kubernetes.io/docs/tasks/tools/) installed and configured
 
-### Installation
-To install: 
-
-1. Clone the latest version of router-sidecar from  the `master` branch.
+### Usages
+You can use the command below to view all the slice routers in a cluster:
 
 ```bash
-  git clone https://github.com/kubeslice/router-sidecar.git
-  cd router-sidecar
+kubectl get pods -n avesha-system | grep vl3-nse-* 
 ```
 
 ## License
