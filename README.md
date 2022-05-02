@@ -25,3 +25,7 @@ To install:
   git clone https://github.com/kubeslice/router-sidecar.git
   cd router-sidecar
 ```
+
+## License
+
+This project is released under the Apache 2.0 License.
