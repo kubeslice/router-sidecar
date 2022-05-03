@@ -20,8 +20,8 @@ package server
 import (
 	"context"
 
-	"github.com/kubeslice/router-sidecar/logger"
-	router "github.com/kubeslice/router-sidecar/pkg/proto"
+	"github.com/kubeslice/router-sidecar/pkg/logger"
+	sidecar "github.com/kubeslice/router-sidecar/pkg/sidecar/sidecarpb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -29,13 +29,13 @@ import (
 
 // SliceRouterSidecar represents the GRPC Server for Slice Router Sidecar.
 type SliceRouterSidecar struct {
-	router.UnimplementedSliceRouterSidecarServiceServer
+	sidecar.UnimplementedSliceRouterSidecarServiceServer
 }
 
 // Slice router gets the slice GW connection information from the slice controller. This is needed to install
 // remote cluster subnet routes into the slice router so that inter-cluster traffic can be forwarded to the right
 // slice GW.
-func (s *SliceRouterSidecar) UpdateSliceGwConnectionContext(ctx context.Context, conContext *router.SliceGwConContext) (*router.SidecarResponse, error) {
+func (s *SliceRouterSidecar) UpdateSliceGwConnectionContext(ctx context.Context, conContext *sidecar.SliceGwConContext) (*sidecar.SidecarResponse, error) {
 	if ctx.Err() == context.Canceled {
 		return nil, status.Errorf(codes.Canceled, "Client cancelled, abandoning.")
 	}
@@ -58,14 +58,14 @@ func (s *SliceRouterSidecar) UpdateSliceGwConnectionContext(ctx context.Context,
 			conContext.GetRemoteSliceGwNsmSubnet(), conContext.GetLocalNsmGwPeerIP())
 	}
 
-	return &router.SidecarResponse{StatusMsg: "Slice Gw Connection Context Updated Successfully"}, nil
+	return &sidecar.SidecarResponse{StatusMsg: "Slice Gw Connection Context Updated Successfully"}, nil
 }
 
 // GetClientConnectionInfo requests the slice router sidecar to send connection information of clients
 // that are connected to the slice router.
 // Slice router is the connectivity entry point to the slice. Any pod that wants to be part of the slice
 // connects to the slice router to send and recieve traffic over the slice.
-func (s *SliceRouterSidecar) GetSliceRouterClientConnectionInfo(ctx context.Context, in *emptypb.Empty) (*router.ClientConnectionInfo, error) {
+func (s *SliceRouterSidecar) GetSliceRouterClientConnectionInfo(ctx context.Context, in *emptypb.Empty) (*sidecar.ClientConnectionInfo, error) {
 	if ctx.Err() == context.Canceled {
 		return nil, status.Errorf(codes.Canceled, "Client cancelled, abandoning.")
 	}
@@ -75,7 +75,7 @@ func (s *SliceRouterSidecar) GetSliceRouterClientConnectionInfo(ctx context.Cont
 		return nil, err
 	}
 	logger.GlobalLogger.Infof("Rxed conn list: %v", connInfo)
-	clientConnInfo := router.ClientConnectionInfo{
+	clientConnInfo := sidecar.ClientConnectionInfo{
 		Connection: connInfo,
 	}
 

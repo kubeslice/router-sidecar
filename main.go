@@ -25,11 +25,10 @@ import (
 	"sync"
 	"syscall"
 
-	sidecar "github.com/kubeslice/router-sidecar/pkg/proto"
+	"github.com/kubeslice/router-sidecar/pkg/logger"
+	"github.com/kubeslice/router-sidecar/pkg/server"
+	sidecar "github.com/kubeslice/router-sidecar/pkg/sidecar/sidecarpb"
 	"google.golang.org/grpc"
-
-	"github.com/kubeslice/router-sidecar/logger"
-	slicectl "github.com/kubeslice/router-sidecar/server"
 )
 
 // startGrpcServer shall start the GRPC server to communicate to Slice Controller
@@ -44,7 +43,7 @@ func startGrpcServer(grpcPort string) error {
 	}
 
 	srv := grpc.NewServer()
-	sidecar.RegisterSliceRouterSidecarServiceServer(srv, &slicectl.SliceRouterSidecar{})
+	sidecar.RegisterSliceRouterSidecarServiceServer(srv, &server.SliceRouterSidecar{})
 	err = srv.Serve(lis)
 	if err != nil {
 		logger.GlobalLogger.Errorf("Start GRPC Server Failed with %v", err.Error())
@@ -92,7 +91,7 @@ func main() {
 	// Create a Logger Module
 	logger.GlobalLogger = logger.NewLogger(logLevel)
 
-	err := slicectl.BootstrapSliceRouterPod()
+	err := server.BootstrapSliceRouterPod()
 	if err != nil {
 		logger.GlobalLogger.Errorf("Failed to bootstrap Kubeslice-router-sidecar pod")
 	}

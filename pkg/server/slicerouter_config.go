@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeslice/router-sidecar/logger"
-	sidecar "github.com/kubeslice/router-sidecar/pkg/proto"
+	"github.com/kubeslice/router-sidecar/pkg/logger"
+	sidecar "github.com/kubeslice/router-sidecar/pkg/sidecar/sidecarpb"
 
 	"github.com/lorenzosaino/go-sysctl"
 	"github.com/vishvananda/netlink"
