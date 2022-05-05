@@ -1,7 +1,7 @@
-@Library('jenkins-library@kubeslice-mesh') _
+@Library('jenkins-library@opensource') _
 dockerImagePipeline(
   script: this,
-  service: 'kubeslice-router-sidecar',
+  service: 'aveshadev/kubeslice-router-sidecar',
   dockerfile: 'Dockerfile',
   buildContext: '.',
   buildArguments: [PLATFORM:"amd64"]
