@@ -1,16 +1,34 @@
+/*  Copyright (c) 2022 Avesha, Inc. All rights reserved.
+ *
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package main
 
 import (
-	"bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/logger"
-	"bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/server"
-	sidecar "bitbucket.org/realtimeai/kubeslice-router-sidecar/pkg/sidecar/sidecarpb"
 	"fmt"
-	"google.golang.org/grpc"
 	"net"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/kubeslice/router-sidecar/pkg/logger"
+	"github.com/kubeslice/router-sidecar/pkg/server"
+	sidecar "github.com/kubeslice/router-sidecar/pkg/sidecar/sidecarpb"
+	"google.golang.org/grpc"
 )
 
 // startGrpcServer shall start the GRPC server to communicate to Slice Controller
