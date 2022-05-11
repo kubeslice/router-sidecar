@@ -16,7 +16,7 @@ It is strongly recommended to use a released version.
   cluster 
 * [`kubectl`](https://kubernetes.io/docs/tasks/tools/) installed and configured
 
-### Build and push docker images
+### Build docker images
 
 ```bash
 git clone https://github.com/kubeslice/router-sidecar.git
