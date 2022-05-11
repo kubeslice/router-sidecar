@@ -22,7 +22,6 @@ It is strongly recommended to use a released version.
 git clone https://github.com/kubeslice/router-sidecar.git
 cd router-sidecar
 make docker-build
-make docker-push
 ```
 
 ### Deploying in kind
