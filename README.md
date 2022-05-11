@@ -35,7 +35,7 @@ kind load docker-image <imagename>:<tag> --name <clustername>
 You can use the command below to view all the slice routers in a cluster:
 
 ```bash
-kubectl get pods -n avesha-system | grep vl3-nse-* 
+kubectl get pods -n kubeslice-system | grep vl3-nse-* 
 ```
 
 ## License
