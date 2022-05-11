@@ -26,7 +26,7 @@ make docker-build
 
 ### Running locally on Kind
 
-You can run the operator on your Kind cluster with the below command
+Load the docker image into kind cluster
 
 ```bash
 kind load docker-image my-custom-image:unique-tag --name clustername
@@ -41,4 +41,4 @@ kubectl get pods -n kubeslice-system | grep vl3-nse-*
 
 ## License
 
-This project is released under the Apache 2.0 License.
+Apache 2.0 License.
