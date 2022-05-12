@@ -13,10 +13,9 @@ It is strongly recommended to use a released version.
 ### Prerequisites
 
 * Docker installed and running in your local machine
-* A running [`kind`](https://kind.sigs.k8s.io/) or [`Docker Desktop Kubernetes`](https://docs.docker.com/desktop/kubernetes/)
-  cluster 
+* A running [`kind`](https://kind.sigs.k8s.io/)
 * [`kubectl`](https://kubernetes.io/docs/tasks/tools/) installed and configured
-* Install the [`operator`](https://github.com/kubeslice/operator)
+* Follow the getting started from above, to install [`kubeslice-controller`](https://github.com/kubeslice/kubeslice-controller) and [`worker-operator`](https://github.com/kubeslice/worker-operator)
 
 # Local build and update 
 
