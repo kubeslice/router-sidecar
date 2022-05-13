@@ -35,12 +35,21 @@ upgrade the avesha helm repo
 
 ```console
 helm repo update
+```
 
 ### Build docker images
+
+1. Clone the latest version of router-sidecar from  the `master` branch.
 
 ```bash
 git clone https://github.com/kubeslice/router-sidecar.git
 cd router-sidecar
+```
+
+2. Adjust `VERSION` variable in the Makefile to change the docker tag to be built.
+Image is set as `docker.io/aveshasystems/router-sidecar:$(VERSION)` in the Makefile. Change this if required
+
+```console
 make docker-build
 ```
 
@@ -52,8 +61,34 @@ You can load the router-sidecar docker image into kind cluster
 kind load docker-image my-custom-image:unique-tag --name clustername
 ```
 
-### Verification
-You can use the command below to view all the slice routers in a cluster:
+### Deploy in a cluster
+
+Update chart values file `yourvaluesfile.yaml` that you have previously created.
+Refer to [values.yaml](https://github.com/kubeslice/charts/blob/master/kubeslice-worker/values.yaml) to create `yourvaluesfiel.yaml` and update the routerSidecar image subsection to use the local image.
+
+From the sample , 
+
+```
+routerSidecar:
+  image: docker.io/aveshasystems/kubeslice-router-sidecar
+  tag: 0.1.0
+```
+
+Change it to ,
+
+```
+routerSidecar:
+  image: <my-custom-image>
+  tag: <unique-tag>
+```
+
+Deploy the updated chart
+
+```console
+make chart-deploy VALUESFILE=yourvaluesfile.yaml
+```
+
+### Verify the router-sidecar pods are running:
 
 ```bash
 kubectl get pods -n kubeslice-system | grep vl3-slice-* 
