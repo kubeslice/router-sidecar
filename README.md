@@ -20,8 +20,11 @@ It is strongly recommended to use a released version.
 
 # Local build and update 
 
-## Latest docker image
-[TBD link to docker hub]
+## Latest docker hub image
+
+```console
+docker pull aveshasystems/kubeslice-router-sidecar:latest
+```
 
 ## Setting up your helm repo
 
