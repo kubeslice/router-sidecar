@@ -1,7 +1,7 @@
 # router-sidecar
 
 ![Docker Image Size](https://img.shields.io/docker/image-size/aveshasystems/kubeslice-router-sidecar/latest)
-![Docker Image Version](https://img.shields.io/docker/v/aveshasystems/kubeslice-router-sidecar?sort=date)
+![Docker Image Version] (https://img.shields.io/docker/v/aveshasystems/kubeslice-router-sidecar?sort=date)
 
 * The Slice Router is a network service component that provides a virtual L3 IP routing functionality within a cluster for the Slice overlay network.
 * Each slice in a cluster has one slice router with the possibility of a redundant pair option. 
