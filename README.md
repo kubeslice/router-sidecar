@@ -58,10 +58,28 @@ make docker-build
 
 ### Running local image on Kind
 
-You can load the router-sidecar docker image into kind cluster
+1. You can load the router-sidecar docker image into kind cluster
 
 ```bash
 kind load docker-image my-custom-image:unique-tag --name clustername
+```
+
+example:
+
+```console
+kind load docker-image aveshasystems/router-sidecar:1.2.1 --name kind
+```
+
+2. Check the loaded image in the cluster. Modify node name if required.
+
+```console
+docker exec -it <node-name> crictl images
+```
+
+example:
+
+```console
+docker exec -it kind-control-plane crictl images
 ```
 
 ### Deploy in a cluster
