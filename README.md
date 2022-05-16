@@ -117,6 +117,11 @@ make chart-deploy VALUESFILE=yourvaluesfile.yaml
 ```bash
 kubectl get pods -n kubeslice-system | grep vl3-slice-* 
 ```
+Example output
+
+```
+vl3-slice-router-red-5b9df8d4dd-hkgkj      2/2     Running   0          26m
+```
 
 ## License
 
