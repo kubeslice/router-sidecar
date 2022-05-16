@@ -88,7 +88,7 @@ docker exec -it kind-control-plane crictl images
 ### Deploy in a Cluster
 
 Update chart values file `yourvaluesfile.yaml` that you have previously created.
-Refer to [values.yaml](https://github.com/kubeslice/charts/blob/master/kubeslice-worker/values.yaml) to create `yourvaluesfiel.yaml` and update the routerSidecar image subsection to use the local image.
+Refer to [values.yaml](https://github.com/kubeslice/charts/blob/master/charts/kubeslice-worker/values.yaml) to create `yourvaluesfiel.yaml` and update the routerSidecar image subsection to use the local image.
 
 From the sample:
 
