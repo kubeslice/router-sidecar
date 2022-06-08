@@ -95,6 +95,7 @@ func vl3InjectRouteInVpp(dstIP string, nextHopIP string) error {
 	vppconfig := getVppConfig(dstIP, nextHopIP)
 	return sendConfigToVppAgent(vppconfig, false)
 }
+
 func getVppConfig(dstIP string, nextHopIP string) *vpp.ConfigData {
 	vppconfig := &vpp.ConfigData{}
 	route := &vpp.Route{
@@ -120,7 +121,7 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIP string) error {
 
 	route := netlink.Route{Dst: dstIPNet, Gw: gwIP}
 
-	if err := netlink.RouteAdd(&route); err != nil {
+	if err := netlink.RouteReplace(&route); err != nil {
 		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, gwIP, err)
 		return err
 	}
@@ -292,8 +293,8 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIP string) error {
 		logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
 	}
 
-	_, ok := remoteSubnetRouteMap[remoteSubnet]
-	if ok && remoteSubnetRouteMap[remoteSubnet] == nextHopIP {
+	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
+	if routePresent && remoteSubnetRouteMap[remoteSubnet] == nextHopIP {
 		logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
 			remoteSubnet, nextHopIP)
 		return nil
