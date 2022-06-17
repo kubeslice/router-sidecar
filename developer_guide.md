@@ -1,12 +1,12 @@
-# Development guidelines for Router Sidecar
+# Development Guidelines for Router Sidecar
 
-* The Slice Router is a network service component that provides a virtual L3 IP routing functionality within a cluster for the Slice overlay network.
+* The Slice Router is a network service component that provides a virtual L3 IP routing functionality within a cluster for the slice overlay network.
 * Each slice in a cluster has one slice router with the possibility of a redundant pair option.
 * The Slice Operator manages the lifecycle of a Slice Router by overseeing the deployment, configuration, continuous monitoring, and management of the Slice Router.
 * The Slice Router provides a full mesh network connectivity between the application pods and slice gateway pods in a cluster.
 
 ## Building and Installing `router-sidecar` in a Local Kind Cluster
-For more information, see [getting started with kind clusters](https://docs.avesha.io/opensource/getting-started-with-kind-clusters).
+For more information, see [getting started with kind clusters](https://docs.avesha.io/documentation/open-source/0.2.0/getting-started-with-kind-clusters).
 
 ### Setting up Development Environment
 
@@ -28,7 +28,7 @@ cd router-sidecar
 ```
 
 2. Adjust image name variable `IMG` in the [`Makefile`](Makefile) to change the docker tag to be built.
-   Default image is set as `IMG ?= aveshasystems/router-sidecar:${VERSION}`. Modify this if required.
+   The default image is set as `IMG ?= aveshasystems/router-sidecar:${VERSION}`. Modify this if required.
 
 ```bash
 make docker-build
@@ -99,11 +99,11 @@ vl3-slice-router-red-5b9df8d4dd-hkgkj      2/2     Running   0          26m
 
 ### Uninstalling the kubeslice-worker
 
-Refer to the [uninstall guide](https://docs.avesha.io/opensource/uninstalling-kubeslice)
+Refer to the [uninstall guide](https://docs.avesha.io/documentation/open-source/0.2.0/getting-started-with-kind-clusters)
 
-1. [Detach](https://docs.avesha.io/opensource/detaching-the-applications) the application from the slice.
+1. [Offboard](https://docs.avesha.io/documentation/open-source/0.2.0/getting-started-with-cloud-clusters/uninstalling-kubeslice/offboarding-namespaces) the namespaces from the slice.
 
-2. [Delete](https://docs.avesha.io/opensource/deleting-the-slice) the slice.
+2. [Delete](https://docs.avesha.io/documentation/open-source/0.2.0/getting-started-with-cloud-clusters/uninstalling-kubeslice/deleting-the-slice) the slice.
 
 3. On the worker cluster, undeploy the kubeslice-worker charts.
 
