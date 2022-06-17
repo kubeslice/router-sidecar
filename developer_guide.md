@@ -99,7 +99,7 @@ vl3-slice-router-red-5b9df8d4dd-hkgkj      2/2     Running   0          26m
 
 ### Uninstalling the kubeslice-worker
 
-Refer to the [uninstall guide](https://docs.avesha.io/documentation/open-source/0.2.0/getting-started-with-kind-clusters)
+Refer to the [uninstallation guide](https://docs.avesha.io/documentation/open-source/0.2.0/getting-started-with-cloud-clusters/uninstalling-kubeslice).
 
 1. [Offboard](https://docs.avesha.io/documentation/open-source/0.2.0/getting-started-with-cloud-clusters/uninstalling-kubeslice/offboarding-namespaces) the namespaces from the slice.
 
