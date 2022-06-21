@@ -122,15 +122,6 @@ func TestRouterConnClientInfo(t *testing.T) {
 				if response.GetConnection()[0].PodName != clientConnInfo.Connection[0].PodName {
 					t.Error("response: expected", tt.res, "received", response)
 				}
-				if response.GetConnection()[0].NsmInterface != clientConnInfo.Connection[0].NsmInterface {
-					t.Error("response: expected", tt.res, "received", response)
-				}
-				if response.GetConnection()[0].NsmPeerIP != clientConnInfo.Connection[0].NsmPeerIP {
-					t.Error("response: expected", tt.res, "received", response)
-				}
-				if response.GetConnection()[0].NsmIP != clientConnInfo.Connection[0].NsmIP {
-					t.Error("response: expected", tt.res, "received", response)
-				}
 			}
 			if err != nil {
 				if er, ok := status.FromError(err); ok {

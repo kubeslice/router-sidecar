@@ -282,16 +282,18 @@ func sliceRouterReconcileRoutingTable() error {
 // Function to inject remote cluster subnet routes into the local slice router.
 // The next hop IP would be the IP address of the slice-gw that connects to the remote cluster.
 func sliceRouterInjectRoute(remoteSubnet string, nextHopIP string) error {
-	if time.Since(lastRoutingTableReconcileTime).Seconds() > routingTableReconcileInterval {
-		err := sliceRouterReconcileRoutingTable()
-		if err != nil {
-			logger.GlobalLogger.Errorf("Failed to reconcile routing table: %v", err)
-		}
-
-		lastRoutingTableReconcileTime = time.Now()
-
-		logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
+	if time.Since(lastRoutingTableReconcileTime).Seconds() < routingTableReconcileInterval {
+		return nil
 	}
+
+	err := sliceRouterReconcileRoutingTable()
+	if err != nil {
+		logger.GlobalLogger.Errorf("Failed to reconcile routing table: %v", err)
+	}
+
+	lastRoutingTableReconcileTime = time.Now()
+
+	logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
 
 	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
 	if routePresent && remoteSubnetRouteMap[remoteSubnet] == nextHopIP {
