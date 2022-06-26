@@ -119,9 +119,10 @@ func TestRouterConnClientInfo(t *testing.T) {
 			}
 
 			if response != nil {
-				if response.GetConnection()[0].PodName != clientConnInfo.Connection[0].PodName {
-					t.Error("response: expected", tt.res, "received", response)
-				}
+				AssertEqual(t, response.GetConnection()[0].PodName, clientConnInfo.Connection[0].PodName, tt.res, response)
+				AssertEqual(t, response.GetConnection()[0].NsmInterface, clientConnInfo.Connection[0].NsmInterface, tt.res, response)
+				AssertEqual(t, response.GetConnection()[0].NsmPeerIP, clientConnInfo.Connection[0].NsmPeerIP, tt.res, response)
+				AssertEqual(t, response.GetConnection()[0].NsmIP, clientConnInfo.Connection[0].NsmIP, tt.res, response)
 			}
 			if err != nil {
 				if er, ok := status.FromError(err); ok {
@@ -134,5 +135,12 @@ func TestRouterConnClientInfo(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func AssertEqual(t *testing.T, expected interface{}, actual interface{}, expectedResponse interface{}, recievedResponse interface{}) {
+	t.Helper()
+	if expected != actual {
+		t.Error("response: expected", expectedResponse, "received", recievedResponse)
 	}
 }
