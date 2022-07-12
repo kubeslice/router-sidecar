@@ -283,6 +283,7 @@ func sliceRouterReconcileRoutingTable() error {
 // The next hop IP would be the IP address of the slice-gw that connects to the remote cluster.
 func sliceRouterInjectRoute(remoteSubnet string, nextHopIP string) error {
 	if time.Since(lastRoutingTableReconcileTime).Seconds() < routingTableReconcileInterval {
+		logger.GlobalLogger.Info("Skipping reconcilation, haven't crossed the reconciliation interval yet.")
 		return nil
 	}
 
