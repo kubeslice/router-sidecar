@@ -19,11 +19,15 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/kubeslice/router-sidecar/pkg/logger"
 	"github.com/kubeslice/router-sidecar/pkg/server"
@@ -107,6 +111,10 @@ func main() {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go shutdownHandler(wg)
+
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	wg.Wait()
 	logger.GlobalLogger.Infof("kubeslice-router-sidecar exited")
