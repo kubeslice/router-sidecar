@@ -1,7 +1,7 @@
 name: end-to-end-test
 on:
   push:
-    branches: [ pr-router-sidecar ]
+    branches: [pr-router-sidecar]
   workflow_dispatch:
 jobs:
   end-to-end:
@@ -10,7 +10,7 @@ jobs:
     - name: checkout the repo
       uses: actions/checkout@v3
       with:
-        ref: ${{ github.event.push.head.sha }}
+        ref: ${{ github.event.pull_request.head.sha }}
     
     - name: build the router sidecar
       uses: docker/build-push-action@v2
