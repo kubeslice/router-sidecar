@@ -37,8 +37,8 @@ WorkerClusters:
   NodeIP: ${IP2}
 WorkerChartOptions:
   SetStrValues:
-    "operator.image": "router-sidecar"
-    "operator.tag": "e2e-latest"
+    "routerSidecar.image": "kubeslice-router-sidecar"
+    "routerSidecar.tag": "e2e-latest"
 TestSuitesEnabled:
   HubSuite: true
   WorkerSuite: true
