@@ -192,6 +192,9 @@ func vl3GetNsmInterfacesInKernel() ([]*sidecar.ConnectionInfo, error) {
 	connList := []*sidecar.ConnectionInfo{}
 
 	for _, link := range links {
+
+		logger.GlobalLogger.Infof("Obtained info about links: ", link)
+
 		if strings.HasPrefix(link.Attrs().Name, "nsm") {
 			addrList, err := netlink.AddrList(link, unix.AF_INET)
 			if err != nil {
