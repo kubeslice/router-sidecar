@@ -15,7 +15,7 @@ jobs:
     - name: build the router sidecar
       uses: docker/build-push-action@v2
       with:
-        tags: router-sidecar:e2e-latest
+        tags: kubeslice-router-sidecar:e2e-latest
         build-args: |
           PLATFORM=amd64
         push: false
