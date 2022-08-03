@@ -1,4 +1,4 @@
-@Library('jenkins-library@opensource') _
+@Library('jenkins-library@opensource-nexus-poc') _
 dockerImagePipeline(
   script: this,
   service: 'kubeslice-router-sidecar',
