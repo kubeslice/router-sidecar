@@ -36,9 +36,12 @@ WorkerClusters:
 - Context: kind-worker
   NodeIP: ${IP2}
 WorkerChartOptions:
+  Repo: https://kubeslice.github.io/kubeslice/
   SetStrValues:
     "routerSidecar.image": "kubeslice-router-sidecar"
     "routerSidecar.tag": "e2e-latest"
+HubChartOptions:
+  Repo: "https://kubeslice.github.io/kubeslice/"
 TestSuitesEnabled:
   HubSuite: true
   WorkerSuite: true
