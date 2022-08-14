@@ -1,7 +1,7 @@
 name: end-to-end-test
 on:
   push:
-    branches: [pr-router-sidecar]
+    branches: [ PR-external ]
   workflow_dispatch:
 jobs:
   end-to-end:
