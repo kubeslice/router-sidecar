@@ -283,7 +283,7 @@ func sliceRouterReconcileRoutingTable() error {
 
 // Function to inject remote cluster subnet routes into the local slice router.
 // The next hop IP would be the IP address of the slice-gw that connects to the remote cluster.
-func sliceRouterInjectRoute(remoteSubnet string, nextHopIP []string) error {
+func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	if time.Since(lastRoutingTableReconcileTime).Seconds() < routingTableReconcileInterval {
 		logger.GlobalLogger.Info("Skipping reconcilation, haven't crossed the reconciliation interval yet.")
 		return nil
@@ -300,10 +300,10 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIP []string) error {
 
 	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
 
-	for i := 0; i < len(nextHopIP); i++ {
-		if routePresent && remoteSubnetRouteMap[remoteSubnet][i] == nextHopIP[i] {
+	for i := 0; i < len(nextHopIPList); i++ {
+		if routePresent && remoteSubnetRouteMap[remoteSubnet][i] == nextHopIPList[i] {
 			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
-				remoteSubnet, nextHopIP[i])
+				remoteSubnet, nextHopIPList[i])
 			return nil
 		}
 
@@ -323,18 +323,18 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIP []string) error {
 					return err
 				}
 			}
-			err := vl3InjectRouteInVpp(remoteSubnet, nextHopIP[i])
+			err := vl3InjectRouteInVpp(remoteSubnet, nextHopIPList[i])
 			if err != nil {
 				return err
 			}
 		} else {
-			err := vl3InjectRouteInKernel(remoteSubnet, nextHopIP[i])
+			err := vl3InjectRouteInKernel(remoteSubnet, nextHopIPList[i])
 			if err != nil {
 				return err
 			}
 		}
 
-		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIP[i])
+		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
 	}
 
 	return nil
