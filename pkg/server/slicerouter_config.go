@@ -318,6 +318,9 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		return nil
 	}
 
+	logger.GlobalLogger.Infof("next Hop IpList recieved ", nextHopIPList)
+	logger.GlobalLogger.Infof("len of next Hop IpList ", len(nextHopIPList))
+
 	err := sliceRouterReconcileRoutingTable()
 	if err != nil {
 		logger.GlobalLogger.Errorf("Failed to reconcile routing table: %v", err)
