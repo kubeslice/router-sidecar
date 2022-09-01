@@ -120,32 +120,9 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIP string) error {
 	}
 	gwIP := net.ParseIP(nextHopIP)
 
-	installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
-	if err != nil {
-		return err
-	}
+	route := netlink.Route{Dst: dstIPNet, MultiPath: []*netlink.NexthopInfo{{Gw: gwIP}}}
 
-	var linkIdx int = -1
-	for _, route := range installedRoutes {
-		if route.Dst == nil {
-			continue
-		}
-		// Default route will have a Dst of nil so it is
-		// important to have a null check here. Else we will
-		// crash trying to deref a null pointer.
-		if route.Dst.String() == nextHopIP+"/32" {
-			linkIdx = route.LinkIndex
-			break
-		}
-	}
-	if linkIdx == -1 {
-		logger.GlobalLogger.Errorf("Route add failed in kernel. Link idx of nexthop not found. Dst: %v, NextHop: %v", dstIPNet, gwIP)
-		return errors.New("Link idx of nexthop not found")
-	}
-
-	route := netlink.Route{LinkIndex: linkIdx, Dst: dstIPNet, Gw: gwIP, Flags: int(netlink.FLAG_ONLINK)}
-
-	if err := netlink.RouteAppend(&route); err != nil {
+	if err := netlink.RouteAddEcmp(&route); err != nil {
 		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, gwIP, err)
 		return err
 	}
