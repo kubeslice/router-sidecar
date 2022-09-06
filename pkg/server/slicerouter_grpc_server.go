@@ -55,7 +55,7 @@ func (s *SliceRouterSidecar) UpdateSliceGwConnectionContext(ctx context.Context,
 		logger.GlobalLogger.Errorf("Failed to add route in slice router: %v", err)
 	} else {
 		logger.GlobalLogger.Infof("Added route in slice router: %v via %v",
-			conContext.GetRemoteSliceGwNsmSubnet(), conContext.GetLocalNsmGwPeerIP())
+			conContext.GetRemoteSliceGwNsmSubnet(), conContext.GetLocalNsmGwPeerIPList())
 	}
 
 	return &sidecar.SidecarResponse{StatusMsg: "Slice Gw Connection Context Updated Successfully"}, nil
