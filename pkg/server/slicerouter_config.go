@@ -299,6 +299,8 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		return nil
 	}
 
+	count := 0
+
 	err := sliceRouterReconcileRoutingTable()
 	if err != nil {
 		logger.GlobalLogger.Errorf("Failed to reconcile routing table: %v", err)
@@ -344,6 +346,8 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			}
 		} else {
 			if i == len(nextHopIPList)-1 {
+				logger.GlobalLogger.Infof("nextHopIpSlice injecting %v and val of i %v", nextHopIpSlice, i)
+				count++
 				err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
 				if err != nil {
 					return err
@@ -352,6 +356,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		}
 		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
 	}
+	logger.GlobalLogger.Infof("Num of times calling the func %v", count)
 
 	return nil
 }
