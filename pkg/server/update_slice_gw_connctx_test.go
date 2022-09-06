@@ -37,6 +37,8 @@ const (
 
 func TestUpdateConnCtx(t *testing.T) {
 
+	remoteSubnetRouteMap = make(map[string][]string)
+
 	tests := []struct {
 		testName string
 		req      *pb.SliceGwConContext

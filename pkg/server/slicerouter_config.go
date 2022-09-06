@@ -112,21 +112,20 @@ func vl3DeleteRouteInVpp(dstIP string, nextHopIP string) error {
 	return sendConfigToVppAgent(vppconfig, true)
 }
 
-func vl3InjectRouteInKernel(dstIP string, nextHopIP string) error {
+func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo) error {
 	_, dstIPNet, err := net.ParseCIDR(dstIP)
 	if err != nil {
 		return err
 	}
-	gwIP := net.ParseIP(nextHopIP)
 
-	route := netlink.Route{Dst: dstIPNet, MultiPath: []*netlink.NexthopInfo{{Gw: gwIP}}}
+	route := netlink.Route{Dst: dstIPNet, MultiPath: nextHopIPSlice}
 
-	if err := netlink.RouteAddEcmp(&route); err != nil {
-		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, gwIP, err)
+	if err := netlink.RouteReplace(&route); err != nil {
+		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, nextHopIPSlice, err)
 		return err
 	}
 
-	logger.GlobalLogger.Infof("Route added successfully in the kernel. Dst: %v, NextHop: %v", dstIPNet, gwIP)
+	logger.GlobalLogger.Infof("Route added successfully in the kernel. Dst: %v, NextHop: %v", dstIPNet, nextHopIPSlice)
 
 	return nil
 }
@@ -257,15 +256,20 @@ func vl3ReconcileRoutesInKernel() error {
 	logger.GlobalLogger.Infof("Route map: %v", routeMap)
 	logger.GlobalLogger.Infof("Slice Route map: %v", remoteSubnetRouteMap)
 
-	for remoteSubnet, nextHopList := range remoteSubnetRouteMap {
-		for i := 0; i < len(nextHopList); i++ {
+	for remoteSubnet, nextHopIpList := range remoteSubnetRouteMap {
+		for i := 0; i < len(nextHopIpList); i++ {
 			_, ok := routeMap[remoteSubnet]
 			// If the route is absent or the nexthop is incorrect, reinstall the route.
-			if !ok || routeMap[remoteSubnet].Gw.String() != nextHopList[i] {
-				logger.GlobalLogger.Infof("Installed route does not reflect slice state. Reconciling dst: %v, gw: %v", remoteSubnet, nextHopList[i])
-				err := vl3InjectRouteInKernel(remoteSubnet, nextHopList[i])
+			if !ok || routeMap[remoteSubnet].Gw.String() != nextHopIpList[i] {
+
+				nextHopIpSlice := []*netlink.NexthopInfo{}
+				gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(routeMap[remoteSubnet].Gw.String())}
+				nextHopIpSlice = append(nextHopIpSlice, gwObj)
+
+				logger.GlobalLogger.Infof("Installed route does not reflect slice state. Reconciling dst: %v, gw: %v", remoteSubnet, nextHopIpList[i])
+				err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
 				if err != nil {
-					logger.GlobalLogger.Errorf("Failed to install route: dst: %v, gw: %v", remoteSubnet, nextHopList[i])
+					logger.GlobalLogger.Errorf("Failed to install route: dst: %v, gw: %v", remoteSubnet, nextHopIpSlice)
 				}
 			}
 		}
@@ -301,6 +305,11 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
 
 	for i := 0; i < len(nextHopIPList); i++ {
+
+		nextHopIpSlice := []*netlink.NexthopInfo{}
+		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(nextHopIPList[i])}
+		nextHopIpSlice = append(nextHopIpSlice, gwObj)
+
 		if routePresent && remoteSubnetRouteMap[remoteSubnet][i] == nextHopIPList[i] {
 			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
 				remoteSubnet, nextHopIPList[i])
@@ -328,12 +337,13 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 				return err
 			}
 		} else {
-			err := vl3InjectRouteInKernel(remoteSubnet, nextHopIPList[i])
-			if err != nil {
-				return err
+			if i == len(nextHopIPList)-1 {
+				err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
+				if err != nil {
+					return err
+				}
 			}
 		}
-
 		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
 	}
 
