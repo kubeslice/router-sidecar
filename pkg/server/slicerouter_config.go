@@ -311,10 +311,10 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
 
 	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
+	nextHopIpSlice := []*netlink.NexthopInfo{}
 
 	for i := 0; i < len(nextHopIPList); i++ {
 
-		nextHopIpSlice := []*netlink.NexthopInfo{}
 		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(nextHopIPList[i])}
 		nextHopIpSlice = append(nextHopIpSlice, gwObj)
 
@@ -356,7 +356,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		}
 		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
 	}
-	logger.GlobalLogger.Infof("Num of times calling the func %v", count)
+	logger.GlobalLogger.Infof("Num of times calling the func %v and ip slice we got ", count, nextHopIpSlice)
 
 	return nil
 }
