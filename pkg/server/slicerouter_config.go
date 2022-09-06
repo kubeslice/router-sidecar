@@ -120,7 +120,7 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 
 	route := netlink.Route{Dst: dstIPNet, MultiPath: nextHopIPSlice}
 
-	if err := netlink.RouteReplace(&route); err != nil {
+	if err := netlink.RouteAddEcmp(&route); err != nil {
 		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, nextHopIPSlice, err)
 		return err
 	}
