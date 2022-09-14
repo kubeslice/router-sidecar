@@ -293,7 +293,6 @@ func sliceRouterReconcileRoutingTable() error {
 func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	if time.Since(lastRoutingTableReconcileTime).Seconds() < routingTableReconcileInterval {
 		logger.GlobalLogger.Info("Skipping reconcilation, haven't crossed the reconciliation interval yet.")
-		return nil
 	}
 
 	count := 0
