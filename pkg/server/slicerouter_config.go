@@ -385,6 +385,11 @@ func BootstrapSliceRouterPod() error {
 			logger.GlobalLogger.Fatalf("Failed to enable IP forwarding in the kernel", err)
 			return err
 		}
+		err = sysctl.Set("fib_multipath_hash_policy", "1")
+		if err != nil {
+			logger.GlobalLogger.Fatalf("failed to set hash policy to L4 for mutipath routes", err)
+			return err
+		}
 	}
 	remoteSubnetRouteMap = make(map[string][]string)
 	lastRoutingTableReconcileTime = time.Now()
