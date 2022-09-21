@@ -120,14 +120,10 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 
 	route := netlink.Route{Dst: dstIPNet, MultiPath: nextHopIPSlice}
 
-	logger.GlobalLogger.Info("After deleting the pod I am here inside vl3InjectRoute before adding route")
-
 	if err := netlink.RouteAddEcmp(&route); err != nil {
 		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, nextHopIPSlice, err)
 		return err
 	}
-
-	logger.GlobalLogger.Info("After deleting the pod I am here inside vl3InjectRoute after adding route")
 	logger.GlobalLogger.Infof("Route added successfully in the kernel. Dst: %v, NextHop: %v", dstIPNet, nextHopIPSlice)
 
 	return nil
@@ -302,15 +298,11 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
 	}
 
-	count := 0
-	logger.GlobalLogger.Info("After deleting the pod I am here before for loop")
-
 	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
 	nextHopIpSlice := []*netlink.NexthopInfo{}
 
 	for i := 0; i < len(nextHopIPList); i++ {
 
-		logger.GlobalLogger.Info("After deleting the pod I am here inside for loop")
 		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(nextHopIPList[i])}
 		nextHopIpSlice = append(nextHopIpSlice, gwObj)
 
@@ -342,9 +334,6 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			}
 		} else {
 			if i == len(nextHopIPList)-1 {
-				logger.GlobalLogger.Info("After deleting the pod I am here inside if block")
-				logger.GlobalLogger.Infof("nextHopIpSlice injecting %v and val of i %v", nextHopIpSlice, i)
-				count++
 				err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
 				if err != nil {
 					return err
@@ -353,8 +342,6 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		}
 		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
 	}
-	logger.GlobalLogger.Infof("Num of times calling the func %v and ip slice we got ", count, nextHopIpSlice)
-
 	return nil
 }
 
