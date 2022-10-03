@@ -308,6 +308,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
 	nextHopIpSlice := []*netlink.NexthopInfo{}
 
+	count := 0
 	for i := 0; i < len(nextHopIPList); i++ {
 
 		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(nextHopIPList[i])}
@@ -349,6 +350,8 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 				}
 			}
 		}
+		count++
+		fmt.Println("val of count and nexthopIp", nextHopIPList[i], i)
 		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
 	}
 	fmt.Println("remoteSubnetRouteMap after loop ends", remoteSubnetRouteMap)
