@@ -19,6 +19,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -258,6 +259,7 @@ func vl3ReconcileRoutesInKernel() error {
 	for remoteSubnet, nextHopIpList := range remoteSubnetRouteMap {
 		for i := 0; i < len(nextHopIpList); i++ {
 			_, ok := routeMap[remoteSubnet]
+			fmt.Println("inside for loop", routeMap[remoteSubnet], nextHopIpList)
 			// If the route is absent or the nexthop is incorrect, reinstall the route.
 			if !ok || !containsRoute(routeMap[remoteSubnet], nextHopIpList[i]) {
 
@@ -306,6 +308,8 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(nextHopIPList[i])}
 		nextHopIpSlice = append(nextHopIpSlice, gwObj)
 
+		// ---------- here also we need to do this
+		fmt.Println("recieved next hop IP list as well as remoteSubnetRouteMap", remoteSubnetRouteMap[remoteSubnet], nextHopIPList)
 		if routePresent && remoteSubnetRouteMap[remoteSubnet][i] == nextHopIPList[i] {
 			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
 				remoteSubnet, nextHopIPList[i])
@@ -342,10 +346,17 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		}
 		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
 	}
+	fmt.Println("remoteSubnetRouteMap after loop ends", remoteSubnetRouteMap)
 	return nil
 }
 
 func containsRoute(nextHopIpList []netlink.Route, s string) bool {
+
+	// nextHopIpList --
+	// s --
+
+	fmt.Println("inside contains route", nextHopIpList, s)
+
 	for _, nextHop := range nextHopIpList {
 		if nextHop.Gw.String() == s {
 			return true
