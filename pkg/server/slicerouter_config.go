@@ -324,6 +324,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 
 		count++
 		fmt.Println("val of count and nexthopIp", nextHopIPList[i], i)
+		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
 
 		if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
 			// If a route was previously installed for the remote subnet then we should
@@ -353,9 +354,8 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 				}
 			}
 		}
-		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
+		fmt.Println("val of i", i)
 	}
-	fmt.Println("remoteSubnetRouteMap after loop ends", remoteSubnetRouteMap)
 	return nil
 }
 
