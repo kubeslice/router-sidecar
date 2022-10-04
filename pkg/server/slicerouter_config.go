@@ -341,12 +341,12 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			if err != nil {
 				return err
 			}
-		} else {
-			if i == len(nextHopIPList)-1 {
-				err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
-				if err != nil {
-					return err
-				}
+		}
+
+		if getSliceRouterDataplaneMode() == SliceRouterDataplaneKernel && i == len(nextHopIPList)-1 {
+			err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
+			if err != nil {
+				return err
 			}
 		}
 		fmt.Println("val of i", i)
