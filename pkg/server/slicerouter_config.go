@@ -262,6 +262,7 @@ func vl3ReconcileRoutesInKernel() error {
 			if !ok || !containsRoute(routeMap[remoteSubnet], nextHopIpList[i]) {
 
 				nextHopIpSlice := []*netlink.NexthopInfo{}
+				logger.GlobalLogger.Infof("nsmips: %v, index: %v", routeMap[remoteSubnet], i)
 				gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(routeMap[remoteSubnet][i].Gw.String())}
 				nextHopIpSlice = append(nextHopIpSlice, gwObj)
 
@@ -287,6 +288,7 @@ func sliceRouterReconcileRoutingTable() error {
 // Function to inject remote cluster subnet routes into the local slice router.
 // The next hop IP would be the IP address of the slice-gw that connects to the remote cluster.
 func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
+	logger.GlobalLogger.Infof("Received NSM IPS from operator: %v", nextHopIPList)
 	if time.Since(lastRoutingTableReconcileTime).Seconds() > routingTableReconcileInterval {
 		err := sliceRouterReconcileRoutingTable()
 		if err != nil {
