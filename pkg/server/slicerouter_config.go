@@ -264,7 +264,7 @@ func vl3ReconcileRoutesInKernel() error {
 		for i := 0; i < len(nextHopIpList); i++ {
 			_, ok := routeMap[remoteSubnet]
 			// If the route is absent or the nexthop is incorrect, reinstall the route.
-			if !ok || !containsRoute(routeMap[remoteSubnet], nextHopIpList[i]) {
+			if !ok || containsRoute(routeMap[remoteSubnet], nextHopIpList[i]) {
 
 				nextHopIpSlice := []*netlink.NexthopInfo{}
 				logger.GlobalLogger.Infof("nsmips: %v, index: %v", routeMap[remoteSubnet], i)
@@ -351,21 +351,28 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	}
 	return nil
 }
-
 func checkRouteAdd(nextHopIpList []string, s string) bool {
+	count := 0
 	for _, nextHop := range nextHopIpList {
 		if nextHop == s {
-			return true
+			count += 1
 		}
+	}
+	if count > 0 {
+		return true
 	}
 	return false
 }
 
 func containsRoute(nextHopIpList []netlink.Route, s string) bool {
+	count := 0
 	for _, nextHop := range nextHopIpList {
 		if nextHop.Gw.String() == s {
-			return true
+			count += 1
 		}
+	}
+	if count > 0 {
+		return true
 	}
 	return false
 }
