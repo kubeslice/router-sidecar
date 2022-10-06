@@ -352,27 +352,19 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	return nil
 }
 func checkRouteAdd(nextHopIpList []string, s string) bool {
-	count := 0
 	for _, nextHop := range nextHopIpList {
 		if nextHop == s {
-			count += 1
+			return true
 		}
-	}
-	if count > 0 {
-		return true
 	}
 	return false
 }
 
 func containsRoute(nextHopIpList []netlink.Route, s string) bool {
-	count := 0
 	for _, nextHop := range nextHopIpList {
 		if nextHop.Gw.String() == s {
-			count += 1
+			return true
 		}
-	}
-	if count > 0 {
-		return true
 	}
 	return false
 }
