@@ -128,6 +128,30 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 
 	return nil
 }
+func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
+	_, dstIPNet, err := net.ParseCIDR(dstIP)
+	if err != nil {
+		return err
+	}
+	routes, err := netlink.RouteGet(dstIPNet.IP)
+	updatedMultiPath := updateMultipath(routes[0].MultiPath, NsmIPToRemove)
+	err = netlink.RouteDel(&routes[0])
+	if err != nil {
+		logger.GlobalLogger.Errorf("Unable to delete ecmp routes, Err: %v", err)
+		return err
+	}
+	return vl3InjectRouteInKernel(dstIP, updatedMultiPath)
+}
+func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) []*netlink.NexthopInfo {
+	index := -1
+	for i, _ := range nextHopIPs {
+		if nextHopIPs[i].Gw.String() == gwToRemove {
+			index = i
+			break
+		}
+	}
+	return append(nextHopIPs[:index], nextHopIPs[index+1:]...)
+}
 
 func vl3GetNsmInterfacesInVpp() ([]*sidecar.ConnectionInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
