@@ -143,6 +143,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	return vl3InjectRouteInKernel(dstIP, updatedMultiPath)
 }
 func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) []*netlink.NexthopInfo {
+	logger.GlobalLogger.Infof("next hop ips %v\t nsm ip : %v", nextHopIPs, gwToRemove)
 	index := -1
 	for i, _ := range nextHopIPs {
 		if nextHopIPs[i].Gw.String() == gwToRemove {
