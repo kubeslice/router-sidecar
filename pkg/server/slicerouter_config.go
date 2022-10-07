@@ -316,7 +316,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		if routePresent && checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) {
 			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
 				remoteSubnet, nextHopIPList[i])
-			return nil
+			continue
 		}
 
 		if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
