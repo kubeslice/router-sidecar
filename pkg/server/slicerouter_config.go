@@ -257,6 +257,7 @@ func vl3ReconcileRoutesInKernel() error {
 		}
 		routeMap[route.Dst.String()] = append(routeMap[route.Dst.String()], route)
 	}
+	logger.GlobalLogger.Infof("installed Route: %v", installedRoutes)
 	logger.GlobalLogger.Infof("Route map: %v", routeMap)
 	logger.GlobalLogger.Infof("Slice Route map: %v", remoteSubnetRouteMap)
 
