@@ -252,7 +252,7 @@ func vl3ReconcileRoutesInKernel() error {
 		// Default route will have a Dst of nil so it is
 		// important to have a null check here. Else we will
 		// crash trying to deref a null pointer.
-		if route.Dst == nil {
+		if route.Dst == nil && route.Gw == nil {
 			continue
 		}
 		routeMap[route.Dst.String()] = append(routeMap[route.Dst.String()], route)
@@ -268,7 +268,7 @@ func vl3ReconcileRoutesInKernel() error {
 			if !ok || !containsRoute(routeMap[remoteSubnet], nextHopIpList[i]) {
 
 				nextHopIpSlice := []*netlink.NexthopInfo{}
-				logger.GlobalLogger.Infof("nsmips: %v, index: %v", routeMap[remoteSubnet], i)
+				logger.GlobalLogger.Infof("nsmips: %v, index: %v, lenght: %v", routeMap[remoteSubnet], i, len(routeMap[remoteSubnet]))
 				gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(routeMap[remoteSubnet][i].Gw.String())}
 				nextHopIpSlice = append(nextHopIpSlice, gwObj)
 
