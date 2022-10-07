@@ -328,16 +328,13 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 
 	for i := 0; i < len(nextHopIPList); i++ {
 
-		//check the equality
-		if reflect.DeepEqual(nextHopIPList, routes) {
-			logger.GlobalLogger.Infof("Equal in inject routes: %v", routes)
-			continue
-		}
-
-		if routePresent && checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) {
+		if !routePresent && !checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) && !reflect.DeepEqual(nextHopIPList, routes) {
 			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
 				remoteSubnet, nextHopIPList[i])
-			continue
+			err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
+			if err != nil {
+				return err
+			}
 		}
 		if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
 			// If a route was previously installed for the remote subnet then we should
