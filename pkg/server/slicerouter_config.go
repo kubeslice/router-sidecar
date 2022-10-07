@@ -21,6 +21,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -331,6 +332,12 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	nextHopInfoSlice := getNextHopInfoSlice(nextHopIPList)
 
 	for i := 0; i < len(nextHopIPList); i++ {
+
+		//check the equality
+		if reflect.DeepEqual(nextHopIPList, routes) {
+			logger.GlobalLogger.Infof("Equal in inject routes: %v", routes)
+			continue
+		}
 
 		if routePresent && checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) {
 			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
