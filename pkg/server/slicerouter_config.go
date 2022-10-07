@@ -367,9 +367,6 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	return nil
 }
 func checkRouteAdd(nextHopIpList []string, s string) bool {
-
-	// 1, 5
-
 	for _, nextHop := range nextHopIpList {
 		if nextHop == s {
 			return true
