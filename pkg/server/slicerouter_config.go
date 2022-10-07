@@ -298,6 +298,15 @@ func sliceRouterReconcileRoutingTable() error {
 	}
 }
 
+func buildNextHopInfo(nextHopIPList []string) []*netlink.NexthopInfo {
+	nextHopIpSlice := []*netlink.NexthopInfo{}
+	for _, nextHop := range nextHopIPList {
+		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(nextHop)}
+		nextHopIpSlice = append(nextHopIpSlice, gwObj)
+	}
+	return nextHopIpSlice
+}
+
 // Function to inject remote cluster subnet routes into the local slice router.
 // The next hop IP would be the IP address of the slice-gw that connects to the remote cluster.
 func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
@@ -323,7 +332,6 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 				remoteSubnet, nextHopIPList[i])
 			continue
 		}
-
 		if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
 			// If a route was previously installed for the remote subnet then we should
 			// delete it before adding a route with a new nexthop IP.
