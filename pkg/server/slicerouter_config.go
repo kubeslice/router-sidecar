@@ -252,7 +252,7 @@ func vl3ReconcileRoutesInKernel() error {
 		// Default route will have a Dst of nil so it is
 		// important to have a null check here. Else we will
 		// crash trying to deref a null pointer.
-		if route.Dst == nil && route.Gw == nil {
+		if route.Dst == nil {
 			continue
 		}
 		routeMap[route.Dst.String()] = append(routeMap[route.Dst.String()], route)
@@ -261,26 +261,37 @@ func vl3ReconcileRoutesInKernel() error {
 	logger.GlobalLogger.Infof("Route map: %v", routeMap)
 	logger.GlobalLogger.Infof("Slice Route map: %v", remoteSubnetRouteMap)
 
-	for remoteSubnet, nextHopIpList := range remoteSubnetRouteMap {
-		for i := 0; i < len(nextHopIpList); i++ {
+	nextHopInfoSlice := []*netlink.NexthopInfo{}
+
+	for remoteSubnet, nextHopList := range remoteSubnetRouteMap {
+		// avoid injecting routes if route map is empty
+		if len(routeMap[remoteSubnet]) == 0 {
+			break
+		}
+		for _, ip := range nextHopList {
 			_, ok := routeMap[remoteSubnet]
-			// If the route is absent or the nexthop is incorrect, reinstall the route.
-			if !ok || !containsRoute(routeMap[remoteSubnet], nextHopIpList[i]) {
-
-				nextHopIpSlice := []*netlink.NexthopInfo{}
-				logger.GlobalLogger.Infof("nsmips: %v, index: %v, lenght: %v", routeMap[remoteSubnet], i, len(routeMap[remoteSubnet]))
-				gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(routeMap[remoteSubnet][i].Gw.String())}
-				nextHopIpSlice = append(nextHopIpSlice, gwObj)
-
-				logger.GlobalLogger.Infof("Installed route does not reflect slice state. Reconciling dst: %v, gw: %v", remoteSubnet, nextHopIpList[i])
-				err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
-				if err != nil {
-					logger.GlobalLogger.Errorf("Failed to install route: dst: %v, gw: %v", remoteSubnet, nextHopIpSlice)
-				}
+			// If the route is absent or nexthop is incorrect, reinstall the route.
+			if !ok || containsRoute(routeMap[remoteSubnet], ip) {
+				gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(ip)}
+				nextHopInfoSlice = append(nextHopInfoSlice, gwObj)
 			}
+		}
+		logger.GlobalLogger.Infof("Installed route does not reflect slice state. Reconciling dst: %v, gw: %v", remoteSubnet, nextHopInfoSlice)
+		err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
+		if err != nil {
+			logger.GlobalLogger.Errorf("Failed to install route: dst: %v, gw: %v", remoteSubnet, nextHopInfoSlice)
 		}
 	}
 	return nil
+}
+
+func getNextHopInfoSlice(nextHopIPList []string) []*netlink.NexthopInfo {
+	nextHopIpSlice := []*netlink.NexthopInfo{}
+	for _, ip := range nextHopIPList {
+		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(ip)}
+		nextHopIpSlice = append(nextHopIpSlice, gwObj)
+	}
+	return nextHopIpSlice
 }
 
 func sliceRouterReconcileRoutingTable() error {
@@ -307,12 +318,9 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	}
 
 	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
-	nextHopIpSlice := []*netlink.NexthopInfo{}
+	nextHopInfoSlice := getNextHopInfoSlice(nextHopIPList)
 
 	for i := 0; i < len(nextHopIPList); i++ {
-
-		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(nextHopIPList[i])}
-		nextHopIpSlice = append(nextHopIpSlice, gwObj)
 
 		if routePresent && checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) {
 			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
@@ -340,10 +348,8 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			if err != nil {
 				return err
 			}
-		}
-
-		if getSliceRouterDataplaneMode() == SliceRouterDataplaneKernel && i == len(nextHopIPList)-1 {
-			err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
+		} else {
+			err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
 			if err != nil {
 				return err
 			}
