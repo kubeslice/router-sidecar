@@ -269,12 +269,13 @@ func vl3ReconcileRoutesInKernel() error {
 			if !ok || containsRoute(routeMap[remoteSubnet], ip) {
 				gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(ip)}
 				nextHopInfoSlice = append(nextHopInfoSlice, gwObj)
+
+				logger.GlobalLogger.Infof("Installed route does not reflect slice state. Reconciling dst: %v, gw: %v", remoteSubnet, nextHopInfoSlice)
+				err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
+				if err != nil {
+					logger.GlobalLogger.Errorf("Failed to install route: dst: %v, gw: %v", remoteSubnet, nextHopInfoSlice)
+				}
 			}
-		}
-		logger.GlobalLogger.Infof("Installed route does not reflect slice state. Reconciling dst: %v, gw: %v", remoteSubnet, nextHopInfoSlice)
-		err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
-		if err != nil {
-			logger.GlobalLogger.Errorf("Failed to install route: dst: %v, gw: %v", remoteSubnet, nextHopInfoSlice)
 		}
 	}
 	return nil
@@ -336,17 +337,16 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 				if err != nil {
 					logger.GlobalLogger.Errorf("Failed to delete route with old gw IP. RemoteSubent: %v, NextHop: %v",
 						remoteSubnet, remoteSubnetRouteMap[remoteSubnet][i])
-					return err
 				}
 			}
 			err := vl3InjectRouteInVpp(remoteSubnet, nextHopIPList[i])
 			if err != nil {
-				return err
+				logger.GlobalLogger.Errorf("Failed to inject route in vpp: %v", err)
 			}
 		} else {
 			err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
 			if err != nil {
-				return err
+				logger.GlobalLogger.Errorf("Failed to inject route in kernel: %v", err)
 			}
 		}
 		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
@@ -354,6 +354,9 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	return nil
 }
 func checkRouteAdd(nextHopIpList []string, s string) bool {
+
+	// 1, 5
+
 	for _, nextHop := range nextHopIpList {
 		if nextHop == s {
 			return true
