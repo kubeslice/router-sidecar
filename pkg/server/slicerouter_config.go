@@ -174,7 +174,7 @@ func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*n
 			break
 		}
 	}
-	return append(nextHopIPs[:index], nextHopIPs[index+1:]...), index + 1
+	return append(nextHopIPs[:index], nextHopIPs[index+1:]...), index
 }
 
 func vl3GetNsmInterfacesInVpp() ([]*sidecar.ConnectionInfo, error) {
