@@ -144,15 +144,16 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	GwIps := make([]net.IP, 0)
 	for _, route := range routes {
 		if route.Dst.String() == dstIPNet.String() {
-			logger.GlobalLogger.Infof("route %#v\t gwip %#v", route, route.Gw)
+			logger.GlobalLogger.Infof("route %#v\t multipath %#v", route, route.MultiPath)
+			ecmpRoutes = route.MultiPath
 			GwIps = append(GwIps, route.Gw)
 		}
 	}
-	logger.GlobalLogger.Infof("gwips from routeList %v", GwIps)
-	for _, gw := range GwIps {
-		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(gw.String())}
-		ecmpRoutes = append(ecmpRoutes, gwObj)
-	}
+	// logger.GlobalLogger.Infof("gwips from routeList %v", GwIps)
+	// for _, gw := range GwIps {
+	// 	gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(gw.String())}
+	// 	ecmpRoutes = append(ecmpRoutes, gwObj)
+	// }
 	if len(ecmpRoutes) == 0 {
 		return errors.New("ecmp routes not yet present")
 	}
