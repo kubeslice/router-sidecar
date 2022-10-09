@@ -135,7 +135,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 		return err
 	}
 	routes, err := netlink.RouteGet(dstIPNet.IP)
-	logger.GlobalLogger.Infof("multipath: %v\t destip ip : %v", routes[0].MultiPath, dstIPNet.IP)
+	logger.GlobalLogger.Infof("route : %v\tmultipath: %v\t destip ip : %v", routes[0], routes[0].MultiPath, dstIPNet.IP)
 	if len(routes[0].MultiPath) == 0 {
 		return errors.New("ecmp routes not yet present")
 	}
