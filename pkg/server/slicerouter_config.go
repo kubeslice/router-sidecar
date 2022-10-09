@@ -158,6 +158,8 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 		return errors.New("ecmp routes not yet present")
 	}
 	updatedMultiPath, index := updateMultipath(ecmpRoutes, NsmIPToRemove)
+	routeToDel := &netlink.Route{Gw: ecmpRoutes[index].Gw}
+	logger.GlobalLogger.Infof("route to del %v\t", routeToDel)
 	err = netlink.RouteDel(&netlink.Route{Gw: ecmpRoutes[index].Gw})
 	if err != nil {
 		logger.GlobalLogger.Errorf("Unable to delete ecmp routes, Err: %v", err)
