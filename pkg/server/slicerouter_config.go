@@ -144,7 +144,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	GwIps := make([]net.IP, 0)
 	for _, route := range routes {
 		if route.Dst.String() == dstIPNet.String() {
-			logger.GlobalLogger.Infof("gwip %v", route.Gw)
+			logger.GlobalLogger.Infof("route %#v\t gwip %#v", route, route.Gw)
 			GwIps = append(GwIps, route.Gw)
 		}
 	}
