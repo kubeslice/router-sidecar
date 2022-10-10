@@ -120,7 +120,8 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 	}
 
 	route := netlink.Route{Dst: dstIPNet, MultiPath: nextHopIPSlice}
-
+	_, present, err := checkForRedundantRoutes(dstIPNet)
+	logger.GlobalLogger.Infof("routes are present:%v", present)
 	if err := netlink.RouteAddEcmp(&route); err != nil {
 		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, nextHopIPSlice, err)
 		return err
@@ -128,6 +129,20 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 	logger.GlobalLogger.Infof("Route added successfully in the kernel. Dst: %v, NextHop: %v", dstIPNet, nextHopIPSlice)
 
 	return nil
+}
+func checkForRedundantRoutes(dstIPNet *net.IPNet) ([]*netlink.NexthopInfo, bool, error) {
+	ecmpRoutes := make([]*netlink.NexthopInfo, 0)
+	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	if err != nil {
+		return ecmpRoutes, false, err
+	}
+	for _, route := range routes {
+		if route.Dst.String() == dstIPNet.String() {
+			logger.GlobalLogger.Infof("route %#v\t multipath %#v", route, route.MultiPath)
+			ecmpRoutes = route.MultiPath
+		}
+	}
+	return ecmpRoutes, true, nil
 }
 func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	_, dstIPNet, err := net.ParseCIDR(dstIP)
@@ -159,6 +174,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 		return err
 	}
 	logger.GlobalLogger.Infof("updated multipaths %v\t", updatedMultiPath)
+
 	return vl3InjectRouteInKernel(dstIP, updatedMultiPath)
 }
 func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*netlink.NexthopInfo, int) {
