@@ -194,6 +194,7 @@ func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*n
 }
 func updateIpsInRemoteSubnetMap(dstIPNet *net.IPNet, ipToRemove net.IP) []string {
 	ips, _ := remoteSubnetRouteMap[dstIPNet.IP.String()]
+	logger.GlobalLogger.Infof("ips in update func %v", ips)
 	index := -1
 	for i, _ := range ips {
 		if ips[i] == ipToRemove.String() {
