@@ -132,6 +132,7 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 }
 func checkForRedundantRoutes(dstIPNet *net.IPNet) ([]*netlink.NexthopInfo, bool, error) {
 	ecmpRoutes := make([]*netlink.NexthopInfo, 0)
+	nonEcmpRoutes := false
 	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 	if err != nil {
 		return ecmpRoutes, false, err
@@ -142,7 +143,10 @@ func checkForRedundantRoutes(dstIPNet *net.IPNet) ([]*netlink.NexthopInfo, bool,
 			ecmpRoutes = route.MultiPath
 		}
 	}
-	return ecmpRoutes, true, nil
+	if len(ecmpRoutes) == 0 {
+		nonEcmpRoutes = true
+	}
+	return ecmpRoutes, nonEcmpRoutes, nil
 }
 func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	_, dstIPNet, err := net.ParseCIDR(dstIP)
@@ -168,14 +172,14 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	updatedMultiPath, index := updateMultipath(ecmpRoutes, NsmIPToRemove)
 	routeToDel := &netlink.Route{Gw: ecmpRoutes[index].Gw}
 	logger.GlobalLogger.Infof("route to del %v\t", routeToDel)
-	err = netlink.RouteDel(&netlink.Route{Dst: dstIPNet})
+	err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
 	if err != nil {
-		logger.GlobalLogger.Errorf("Unable to delete ecmp routes, Err: %v", err)
+		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
 		return err
 	}
 	logger.GlobalLogger.Infof("updated multipaths %v\t", updatedMultiPath)
-
-	return vl3InjectRouteInKernel(dstIP, updatedMultiPath)
+	remoteSubnetRouteMap[dstIPNet.IP.String()] = updateIpsInRemoteSubnetMap(dstIPNet, ecmpRoutes[index].Gw)
+	return nil
 }
 func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*netlink.NexthopInfo, int) {
 	logger.GlobalLogger.Infof("next hop ips %v\t nsm ip : %v", nextHopIPs, gwToRemove)
@@ -188,7 +192,17 @@ func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*n
 	}
 	return append(nextHopIPs[:index], nextHopIPs[index+1:]...), index
 }
-
+func updateIpsInRemoteSubnetMap(dstIPNet *net.IPNet, ipToRemove net.IP) []string {
+	ips, _ := remoteSubnetRouteMap[dstIPNet.IP.String()]
+	index := -1
+	for i, _ := range ips {
+		if ips[i] == ipToRemove.String() {
+			index = i
+			break
+		}
+	}
+	return append(ips[:index], ips[index+1:]...)
+}
 func vl3GetNsmInterfacesInVpp() ([]*sidecar.ConnectionInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
