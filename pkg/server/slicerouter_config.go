@@ -141,30 +141,24 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	}
 	logger.GlobalLogger.Infof("routes from routeList %v", routes)
 	ecmpRoutes := make([]*netlink.NexthopInfo, 0)
-	GwIps := make([]net.IP, 0)
 	for _, route := range routes {
 		if route.Dst.String() == dstIPNet.String() {
 			logger.GlobalLogger.Infof("route %#v\t multipath %#v", route, route.MultiPath)
 			ecmpRoutes = route.MultiPath
-			GwIps = append(GwIps, route.Gw)
 		}
 	}
-	// logger.GlobalLogger.Infof("gwips from routeList %v", GwIps)
-	// for _, gw := range GwIps {
-	// 	gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(gw.String())}
-	// 	ecmpRoutes = append(ecmpRoutes, gwObj)
-	// }
 	if len(ecmpRoutes) == 0 {
 		return errors.New("ecmp routes not yet present")
 	}
 	updatedMultiPath, index := updateMultipath(ecmpRoutes, NsmIPToRemove)
 	routeToDel := &netlink.Route{Gw: ecmpRoutes[index].Gw}
 	logger.GlobalLogger.Infof("route to del %v\t", routeToDel)
-	err = netlink.RouteDel(&netlink.Route{Gw: ecmpRoutes[index].Gw})
+	err = netlink.RouteDel(&netlink.Route{Dst: dstIPNet})
 	if err != nil {
 		logger.GlobalLogger.Errorf("Unable to delete ecmp routes, Err: %v", err)
 		return err
 	}
+	logger.GlobalLogger.Infof("updated multipaths %v\t", updatedMultiPath)
 	return vl3InjectRouteInKernel(dstIP, updatedMultiPath)
 }
 func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*netlink.NexthopInfo, int) {
