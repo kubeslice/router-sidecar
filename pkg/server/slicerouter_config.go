@@ -19,9 +19,9 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -120,8 +120,7 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 	}
 
 	route := netlink.Route{Dst: dstIPNet, MultiPath: nextHopIPSlice}
-
-	if err := netlink.RouteAddEcmp(&route); err != nil {
+	if err := netlink.RouteReplace(&route); err != nil {
 		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, nextHopIPSlice, err)
 		return err
 	}
@@ -129,7 +128,55 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 
 	return nil
 }
-
+func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
+	_, dstIPNet, err := net.ParseCIDR(dstIP)
+	if err != nil {
+		return err
+	}
+	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	if err != nil {
+		return err
+	}
+	ecmpRoutes := make([]*netlink.NexthopInfo, 0)
+	for _, route := range routes {
+		if route.Dst.String() == dstIPNet.String() {
+			ecmpRoutes = route.MultiPath
+		}
+	}
+	if len(ecmpRoutes) == 0 {
+		return errors.New("ecmp routes not yet present")
+	}
+	ecmpRoutesCopy := append(make([]*netlink.NexthopInfo, 0), ecmpRoutes...)
+	updatedMultiPath, index := updateMultipath(ecmpRoutes, NsmIPToRemove)
+	err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
+	if err != nil {
+		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
+		return err
+	}
+	remoteSubnetRouteMap[dstIPNet.IP.String()] = updateIpsInRemoteSubnetMap(dstIPNet, ecmpRoutesCopy[index].Gw)
+	return nil
+}
+func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*netlink.NexthopInfo, int) {
+	index := -1
+	for i, _ := range nextHopIPs {
+		if nextHopIPs[i].Gw.String() == gwToRemove {
+			index = i
+			break
+		}
+	}
+	return append(nextHopIPs[:index], nextHopIPs[index+1:]...), index
+}
+func updateIpsInRemoteSubnetMap(dstIPNet *net.IPNet, ipToRemove net.IP) []string {
+	ips, _ := remoteSubnetRouteMap[dstIPNet.String()]
+	index := -1
+	for i, _ := range ips {
+		if ips[i] == ipToRemove.String() {
+			index = i
+			break
+		}
+	}
+	return append(ips[:index], ips[index+1:]...)
+}
 func vl3GetNsmInterfacesInVpp() ([]*sidecar.ConnectionInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -333,13 +380,10 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 
 	for i := 0; i < len(nextHopIPList); i++ {
 
-		if !routePresent && !checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) && !reflect.DeepEqual(nextHopIPList, routes) {
+		if routePresent && checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) {
 			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
 				remoteSubnet, nextHopIPList[i])
-			err := vl3InjectRouteInKernel(remoteSubnet, nextHopIpSlice)
-			if err != nil {
-				return err
-			}
+			continue
 		}
 		if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
 			// If a route was previously installed for the remote subnet then we should
