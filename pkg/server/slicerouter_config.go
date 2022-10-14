@@ -370,16 +370,16 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 		logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
 	}
 
-	// _, routePresent := remoteSubnetRouteMap[remoteSubnet]
+	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
 	nextHopInfoSlice := getNextHopInfoSlice(nextHopIPList)
 
 	for i := 0; i < len(nextHopIPList); i++ {
 
-		// if routePresent && checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) {
-		// 	logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
-		// 		remoteSubnet, nextHopIPList[i])
-		// 	continue
-		// }
+		if routePresent && checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) {
+			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
+				remoteSubnet, nextHopIPList[i])
+			continue
+		}
 		if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
 			// If a route was previously installed for the remote subnet then we should
 			// delete it before adding a route with a new nexthop IP.
