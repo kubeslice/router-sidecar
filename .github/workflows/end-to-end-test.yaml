@@ -6,6 +6,7 @@ on:
 env:
   chartuser: ${{ secrets.DEV_CHARTS_USERNAME }}
   chartpassword: ${{ secrets.DEV_CHARTS_PASSWORD }}
+
 jobs:
   end-to-end:
     if: ${{ github.event.label.name == 'ready-to-test' }}
