@@ -30,6 +30,9 @@ if [ ! $(kind get clusters | grep controller) ];then
 
   # Switch to Controller cluster...
   kubectx kind-controller
+  
+  # loading docker image into kind netops
+  kind load docker-image kubeslice-router-sidecar:${GITHUB_HEAD_COMMIT} --name controller
 
   echo Install the Tigera Calico operator...
   kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/tigera-operator.yaml
@@ -89,6 +92,9 @@ if [ ! $(kind get clusters | grep worker) ];then
 
   # Switch to Worker cluster...
   kubectx kind-worker
+  
+  # loading docker image into kind netops
+  kind load docker-image kubeslice-router-sidecar:${GITHUB_HEAD_COMMIT} --name worker
 
   echo Install the Tigera Calico operator...
   kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.1/manifests/tigera-operator.yaml
