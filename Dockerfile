@@ -37,7 +37,8 @@ FROM ${PLATFORM}/alpine:3.15
 
 # Add the necessary pakages:
 # tc - is needed for traffic control and shaping on the sidecar.  it is part of the iproute2
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates &&\
+    apk add iproute2
 
 # Run the sidecar binary.
 WORKDIR /kubeslice

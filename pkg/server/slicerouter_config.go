@@ -19,6 +19,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
 	"strconv"
@@ -119,7 +120,32 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIP string) error {
 	}
 	gwIP := net.ParseIP(nextHopIP)
 
-	route := netlink.Route{Dst: dstIPNet, Gw: gwIP}
+	installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	if err != nil {
+		return err
+	}
+
+	var linkIdx int = -1
+	for _, route := range installedRoutes {
+		logger.GlobalLogger.Errorf("Route: %v", route)
+		if route.Dst == nil {
+			continue
+		}
+		logger.GlobalLogger.Errorf("Route: %v, dst: %s, nh: %s", route, route.Dst.String(), nextHopIP)
+		// Default route will have a Dst of nil so it is
+		// important to have a null check here. Else we will
+		// crash trying to deref a null pointer.
+		if route.Dst.String() == nextHopIP+"/32" {
+			linkIdx = route.LinkIndex
+			break
+		}
+	}
+	if linkIdx == -1 {
+		logger.GlobalLogger.Errorf("Route add failed in kernel. Link idx of nexthop not found. Dst: %v, NextHop: %v", dstIPNet, gwIP)
+		return errors.New("Link idx of nexthop not found")
+	}
+
+	route := netlink.Route{LinkIndex: linkIdx, Dst: dstIPNet, Gw: gwIP, Flags: int(netlink.FLAG_ONLINK)}
 
 	if err := netlink.RouteReplace(&route); err != nil {
 		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, gwIP, err)
@@ -187,12 +213,30 @@ func vl3GetNsmInterfacesInKernel() ([]*sidecar.ConnectionInfo, error) {
 	links, err := netlink.LinkList()
 	if err != nil {
 		logger.GlobalLogger.Errorf("Could not get link list, Err: %v", err)
+		return nil, err
 	}
+
+	installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	if err != nil {
+		logger.GlobalLogger.Errorf("Could not get route list, Err: %v", err)
+		return nil, err
+	}
+
+	intfMap := make(map[int]string)
+
+	for _, route := range installedRoutes {
+		if route.Dst == nil {
+			continue
+		}
+		intfMap[route.LinkIndex] = route.Dst.String()
+	}
+
+	logger.GlobalLogger.Infof("intf map: %v", intfMap)
 
 	connList := []*sidecar.ConnectionInfo{}
 
 	for _, link := range links {
-		if strings.HasPrefix(link.Attrs().Name, "nsm") {
+		if strings.HasPrefix(link.Attrs().Name, "vl3-") {
 			addrList, err := netlink.AddrList(link, unix.AF_INET)
 			if err != nil {
 				logger.GlobalLogger.Errorf("Failed to get address list for intf: %v, err: %v",
@@ -203,30 +247,17 @@ func vl3GetNsmInterfacesInKernel() ([]*sidecar.ConnectionInfo, error) {
 				logger.GlobalLogger.Infof("More than one address on nsm intf: %v", addrList)
 				continue
 			}
-			// nsmIP is the IP address assigned to the client. The prefix pool is a /30 address.
-			// That gives us 4 IP addresses. NSM NSEs assign the .1 to the client and the .2 to the
-			// server. The .0 adress is the network address and the .3 is the broadcast address.
-			// We derive the nsm IP assigned to the client and the nsm IP assigned to the server
-			// from the broadcast address.
-			// nsmIP is the client IP and nsmPeerIP is the IP on the slice router.
-			nsmIP := net.IP{
-				addrList[0].Broadcast[0],
-				addrList[0].Broadcast[1],
-				addrList[0].Broadcast[2],
-				addrList[0].Broadcast[3] - 2,
-			}
-			nsmPeerIP := net.IP{
-				addrList[0].Broadcast[0],
-				addrList[0].Broadcast[1],
-				addrList[0].Broadcast[2],
-				addrList[0].Broadcast[3] - 1,
-			}
+
+			// nsmIP is the IP address on the app pod, whereas nsmPeerIP is the IP address on the
+			// corresponding link on the vl3 slice router
+			nsmIP := strings.Split(intfMap[link.Attrs().Index], "/")[0]
+			nsmPeerIP := addrList[0].IP.String()
 
 			conn := sidecar.ConnectionInfo{
 				PodName:      link.Attrs().Alias,
 				NsmInterface: "nsm0",
-				NsmIP:        nsmIP.String(),
-				NsmPeerIP:    nsmPeerIP.String(),
+				NsmIP:        nsmIP,
+				NsmPeerIP:    nsmPeerIP,
 			}
 			connList = append(connList, &conn)
 		}

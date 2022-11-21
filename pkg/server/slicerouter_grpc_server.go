@@ -83,4 +83,3 @@ func (s *SliceRouterSidecar) GetSliceRouterClientConnectionInfo(ctx context.Cont
 
 	return &clientConnInfo, nil
 }
-
