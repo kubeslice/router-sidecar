@@ -153,7 +153,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
 		return err
 	}
-	remoteSubnetRouteMap[dstIPNet.IP.String()] = updateIpsInRemoteSubnetMap(dstIPNet, ecmpRoutesCopy[index].Gw)
+	remoteSubnetRouteMap[dstIP] = updateIpsInRemoteSubnetMap(dstIPNet, ecmpRoutesCopy[index].Gw)
 	return nil
 }
 func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*netlink.NexthopInfo, int) {
