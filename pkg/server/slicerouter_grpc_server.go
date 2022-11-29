@@ -48,7 +48,7 @@ func (s *SliceRouterSidecar) UpdateSliceGwConnectionContext(ctx context.Context,
 	if len(conContext.GetLocalNsmGwPeerIPList()) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid Local NSM Gateway Peer IPs")
 	}
-	logger.GlobalLogger.Infof("conContext : %v", conContext)
+	logger.GlobalLogger.Infof("conContext UpdateSliceGwConnectionContext : %v", conContext)
 
 	err := sliceRouterInjectRoute(conContext.GetRemoteSliceGwNsmSubnet(), conContext.GetLocalNsmGwPeerIPList())
 	if err != nil {

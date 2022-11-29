@@ -146,15 +146,17 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	if len(ecmpRoutes) == 0 {
 		return errors.New("ecmp routes not yet present")
 	}
-	ecmpRoutesCopy := ecmpRoutes
-	updatedMultiPath, index := updateMultipath(ecmpRoutes, NsmIPToRemove)
+	logger.GlobalLogger.Info("ecmpRoutes","ecmpRoutes",ecmpRoutes)
+
+	updatedMultiPath, _ := updateMultipath(ecmpRoutes, NsmIPToRemove)
+	logger.GlobalLogger.Info("updatedMultiPath","updatedMultiPath",updatedMultiPath)
+	logger.GlobalLogger.Info("ecmpRoutes after update","ecmpRoutes",ecmpRoutes)
 	err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
 	if err != nil {
 		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
 		return err
 	}
-	logger.GlobalLogger.Info("ecmpRoutesCopy","ecmpRoutesCopy",ecmpRoutesCopy)
-	remoteSubnetRouteMap[dstIP] = updateIpsInRemoteSubnetMap(dstIPNet, ecmpRoutesCopy[index].Gw)
+	remoteSubnetRouteMap[dstIP] = updateIpsInRemoteSubnetMap(dstIPNet, NsmIPToRemove)
 	logger.GlobalLogger.Info("remoteSubnetRouteMap","remoteSubnetRouteMap",remoteSubnetRouteMap)
 	return nil
 }
@@ -169,11 +171,11 @@ func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*n
 	}
 	return append(nextHopIPs[:index], nextHopIPs[index+1:]...), index
 }
-func updateIpsInRemoteSubnetMap(dstIPNet *net.IPNet, ipToRemove net.IP) []string {
+func updateIpsInRemoteSubnetMap(dstIPNet *net.IPNet, ipToRemove string) []string {
 	ips, _ := remoteSubnetRouteMap[dstIPNet.String()]
 	index := -1
 	for i, _ := range ips {
-		if ips[i] == ipToRemove.String() {
+		if ips[i] == ipToRemove {
 			index = i
 			break
 		}
