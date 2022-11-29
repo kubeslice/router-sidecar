@@ -146,16 +146,19 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	if len(ecmpRoutes) == 0 {
 		return errors.New("ecmp routes not yet present")
 	}
-	ecmpRoutesCopy := append(make([]*netlink.NexthopInfo, 0), ecmpRoutes...)
+	ecmpRoutesCopy := ecmpRoutes
 	updatedMultiPath, index := updateMultipath(ecmpRoutes, NsmIPToRemove)
 	err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
 	if err != nil {
 		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
 		return err
 	}
+	logger.GlobalLogger.Info("ecmpRoutesCopy","ecmpRoutesCopy",ecmpRoutesCopy)
 	remoteSubnetRouteMap[dstIP] = updateIpsInRemoteSubnetMap(dstIPNet, ecmpRoutesCopy[index].Gw)
+	logger.GlobalLogger.Info("remoteSubnetRouteMap","remoteSubnetRouteMap",remoteSubnetRouteMap)
 	return nil
 }
+
 func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*netlink.NexthopInfo, int) {
 	index := -1
 	for i, _ := range nextHopIPs {
@@ -374,6 +377,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 
 		logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
 	}
+	logger.GlobalLogger.Infof("sliceRouterInjectRoute","remoteSubnetRouteMap",remoteSubnetRouteMap)
 
 	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
 	nextHopInfoSlice := getNextHopInfoSlice(nextHopIPList)
