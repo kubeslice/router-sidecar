@@ -414,6 +414,8 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
 			if err != nil {
 				logger.GlobalLogger.Errorf("Failed to inject route in kernel: %v", err)
+				// do not add entry in gloabl map
+				continue
 			}
 		}
 		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
