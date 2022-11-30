@@ -339,6 +339,9 @@ func vl3ReconcileRoutesInKernel() error {
 func getNextHopInfoSlice(nextHopIPList []string) []*netlink.NexthopInfo {
 	nextHopIpSlice := []*netlink.NexthopInfo{}
 	for _, ip := range nextHopIPList {
+		if net.ParseIP(ip) == nil {
+			continue
+		}
 		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(ip)}
 		nextHopIpSlice = append(nextHopIpSlice, gwObj)
 	}
