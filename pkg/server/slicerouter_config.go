@@ -180,6 +180,10 @@ func updateIpsInRemoteSubnetMap(dstIPNet *net.IPNet, ipToRemove string) []string
 			break
 		}
 	}
+	// if not found return same ips
+	if index == -1 {
+		return ips
+	}
 	return append(ips[:index], ips[index+1:]...)
 }
 func vl3GetNsmInterfacesInVpp() ([]*sidecar.ConnectionInfo, error) {
@@ -414,7 +418,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
 			if err != nil {
 				logger.GlobalLogger.Errorf("Failed to inject route in kernel: %v", err)
-				// do not add entry in gloabl map
+				// do not add entry in gloabl map in case of error and continue for next route enteries
 				continue
 			}
 		}
