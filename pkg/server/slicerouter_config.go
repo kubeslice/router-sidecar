@@ -284,6 +284,7 @@ func vl3GetNsmInterfacesInKernel() ([]*sidecar.ConnectionInfo, error) {
 }
 
 func vl3GetRouteInKernel(dstIP string, nsmIP string) (bool, error) {
+	logger.GlobalLogger.Info("get route in kernel", "dstIP", dstIP, "nsmip", nsmIP)
 	_, dstIPNet, err := net.ParseCIDR(dstIP)
 	if err != nil {
 		return false, err
@@ -305,6 +306,7 @@ func vl3GetRouteInKernel(dstIP string, nsmIP string) (bool, error) {
 		return false, errors.New("ecmp routes not yet present")
 	}
 
+	logger.GlobalLogger.Info("ranging over ecmp routes", ecmpRoutes)
 	for _, r := range ecmpRoutes {
 		if r.Gw.String() == nsmIP {
 			return true, nil
