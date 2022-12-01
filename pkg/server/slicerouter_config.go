@@ -129,6 +129,7 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 	return nil
 }
 func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
+	logger.GlobalLogger.Info("request to remove nsmIP from routes","nsmip",NsmIPToRemove)
 	_, dstIPNet, err := net.ParseCIDR(dstIP)
 	if err != nil {
 		return err
