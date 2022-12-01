@@ -157,7 +157,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
 		return err
 	}
-	remoteSubnetRouteMap[dstIP] = updateIpsInRemoteSubnetMap(dstIPNet, NsmIPToRemove)
+	remoteSubnetRouteMap[dstIP] = contructArrayFromNextHop(updatedMultiPath)
 	logger.GlobalLogger.Info("remoteSubnetRouteMap","remoteSubnetRouteMap",remoteSubnetRouteMap)
 	return nil
 }
@@ -171,21 +171,6 @@ func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*n
 		}
 	}
 	return append(nextHopIPs[:index], nextHopIPs[index+1:]...), index
-}
-func updateIpsInRemoteSubnetMap(dstIPNet *net.IPNet, ipToRemove string) []string {
-	ips, _ := remoteSubnetRouteMap[dstIPNet.String()]
-	index := -1
-	for i, _ := range ips {
-		if ips[i] == ipToRemove {
-			index = i
-			break
-		}
-	}
-	// if not found return same ips
-	if index == -1 {
-		return ips
-	}
-	return append(ips[:index], ips[index+1:]...)
 }
 func vl3GetNsmInterfacesInVpp() ([]*sidecar.ConnectionInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
@@ -352,6 +337,16 @@ func getNextHopInfoSlice(nextHopIPList []string) []*netlink.NexthopInfo {
 	}
 	return nextHopIpSlice
 }
+
+// contructArrayFromNextHop takes  []*netlink.NexthopInfo and flattens nextHop IPs to []string
+func contructArrayFromNextHop(nextHopIP []*netlink.NexthopInfo) []string {
+	var nextHopIPList []string
+	for _,ip := range nextHopIP {
+		nextHopIPList = append(nextHopIPList, ip.Gw.String())
+	}
+	return nextHopIPList
+}
+
 
 func sliceRouterReconcileRoutingTable() error {
 	if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
