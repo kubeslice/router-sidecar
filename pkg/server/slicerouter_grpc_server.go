@@ -104,3 +104,20 @@ func (s *SliceRouterSidecar) UpdateEcmpRoutes(ctx context.Context, conContext *s
 	}
 	return &sidecar.SidecarResponse{StatusMsg: "Ecmp routes Updated Successfully"}, nil
 }
+
+func (s *SliceRouterSidecar) GetRouteInKernel(ctx context.Context, v *sidecar.VerifyRouteAddRequest) (*sidecar.VerifyRouteAddResponse, error) {
+	if ctx.Err() == context.Canceled {
+		return nil, status.Errorf(codes.Canceled, "Client cancelled, abandoning.")
+	}
+	if v.GetDstIP() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid Remote Slice Gateway Subnet")
+	}
+	if v.GetNsmIP() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid NSM IP")
+	}
+	isPresent, err := vl3GetRouteInKernel(v.DstIP, v.NsmIP)
+	if err != nil {
+		logger.GlobalLogger.Errorf("Failed to verify route in slice router: %v", err)
+	}
+	return &sidecar.VerifyRouteAddResponse{IsRoutePresent: isPresent}, nil
+}
