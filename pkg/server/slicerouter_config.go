@@ -34,6 +34,7 @@ import (
 	"go.ligato.io/vpp-agent/v3/proto/ligato/configurator"
 	"go.ligato.io/vpp-agent/v3/proto/ligato/vpp"
 	vpp_l3 "go.ligato.io/vpp-agent/v3/proto/ligato/vpp/l3"
+
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 )
@@ -172,7 +173,7 @@ func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*n
 	}
 	// if gwToRemove not found
 	if index == -1 {
-		return nextHopIPs,index
+		return nextHopIPs, index
 	}
 	return append(nextHopIPs[:index], nextHopIPs[index+1:]...), index
 }

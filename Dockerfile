@@ -40,6 +40,9 @@ FROM ${PLATFORM}/alpine:3.15
 RUN apk add --no-cache ca-certificates &&\
     apk add iproute2
 
+# Install grpccurl for debugging
+RUN go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+
 # Run the sidecar binary.
 WORKDIR /kubeslice
 

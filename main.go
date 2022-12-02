@@ -29,6 +29,7 @@ import (
 	"github.com/kubeslice/router-sidecar/pkg/server"
 	sidecar "github.com/kubeslice/router-sidecar/pkg/sidecar/sidecarpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 // startGrpcServer shall start the GRPC server to communicate to Slice Controller
@@ -44,6 +45,10 @@ func startGrpcServer(grpcPort string) error {
 
 	srv := grpc.NewServer()
 	sidecar.RegisterSliceRouterSidecarServiceServer(srv, &server.SliceRouterSidecar{})
+
+	// TODO: only for debug purpose please revert
+	reflection.Register(srv)
+
 	err = srv.Serve(lis)
 	if err != nil {
 		logger.GlobalLogger.Errorf("Start GRPC Server Failed with %v", err.Error())
