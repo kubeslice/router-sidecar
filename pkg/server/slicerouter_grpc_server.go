@@ -118,6 +118,7 @@ func (s *SliceRouterSidecar) GetRouteInKernel(ctx context.Context, v *sidecar.Ve
 	isPresent, err := vl3GetRouteInKernel(v.DstIP, v.NsmIP)
 	if err != nil {
 		logger.GlobalLogger.Errorf("Failed to verify route in slice router: %v", err)
+		return &sidecar.VerifyRouteAddResponse{IsRoutePresent: false}, err
 	}
 	return &sidecar.VerifyRouteAddResponse{IsRoutePresent: isPresent}, nil
 }
