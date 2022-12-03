@@ -101,6 +101,7 @@ func (s *SliceRouterSidecar) UpdateEcmpRoutes(ctx context.Context, conContext *s
 	err := vl3UpdateEcmpRoute(conContext.GetRemoteSliceGwNsmSubnet(), conContext.GetNsmIPToRemove())
 	if err != nil {
 		logger.GlobalLogger.Errorf("Failed to update ecmp routes in slice router: %v", err)
+		return &sidecar.SidecarResponse{StatusMsg: "Failed to update ecmp routes in slice router"}, err
 	}
 	return &sidecar.SidecarResponse{StatusMsg: "Ecmp routes Updated Successfully"}, nil
 }

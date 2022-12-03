@@ -1,6 +1,6 @@
 module github.com/kubeslice/router-sidecar
 
-go 1.17
+go 1.19
 
 require (
 	github.com/lorenzosaino/go-sysctl v0.1.1

@@ -33,7 +33,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-//For initializing the buffcon
+// For initializing the buffcon
 func dialer() func(context.Context, string) (net.Conn, error) {
 
 	listner := bufconn.Listen(1024 * 1024)
@@ -53,8 +53,6 @@ func dialer() func(context.Context, string) (net.Conn, error) {
 }
 
 func TestRouterConnClientInfo(t *testing.T) {
-
-	remoteSubnetRouteMap = make(map[string][]string)
 
 	connList := []*pb.ConnectionInfo{}
 	connInfo := pb.ConnectionInfo{
