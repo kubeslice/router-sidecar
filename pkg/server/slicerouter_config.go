@@ -463,8 +463,12 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 				continue
 			}
 		}
-		nextHopList, _ = remoteSubnetRouteMap.Load(remoteSubnet)
-		remoteSubnetRouteMap.Store(remoteSubnet, append(nextHopList.([]string), nextHopIPList[i]))
+		nextHopList, ok := remoteSubnetRouteMap.Load(remoteSubnet)
+		if ok {
+			remoteSubnetRouteMap.Store(remoteSubnet, append(nextHopList.([]string), nextHopIPList[i]))
+		} else {
+			remoteSubnetRouteMap.Store(remoteSubnet, nextHopIPList[i])
+		}
 	}
 	return nil
 }
