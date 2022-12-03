@@ -147,7 +147,9 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 		}
 	}
 	if len(ecmpRoutes) == 0 {
-		return errors.New("ecmp routes not yet present")
+		// if only a single route is present , ecmpRoutes is empty
+		// should we still search for the route ?
+		return nil
 	}
 	logger.GlobalLogger.Info("ecmpRoutes", "ecmpRoutes", ecmpRoutes)
 
