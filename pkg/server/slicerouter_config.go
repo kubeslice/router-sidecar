@@ -149,6 +149,16 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	if len(ecmpRoutes) == 0 {
 		// if only a single route is present , ecmpRoutes is empty
 		// should we still search for the route ?
+		for _,route := range routes {
+			if route.Gw.String() == NsmIPToRemove{
+				// remove the route
+				err := netlink.RouteDel(&route)
+				if err != nil {
+					logger.GlobalLogger.Errorf("Unable to delete route, Err: %v", err)
+					return err
+				}
+			}
+		}
 		return nil
 	}
 	logger.GlobalLogger.Info("ecmpRoutes", "ecmpRoutes", ecmpRoutes)
