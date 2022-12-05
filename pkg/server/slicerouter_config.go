@@ -140,6 +140,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	if err != nil {
 		return err
 	}
+	logger.GlobalLogger.Info("routes list","routes",routes)
 	ecmpRoutes := make([]*netlink.NexthopInfo, 0)
 	for _, route := range routes {
 		if route.Dst.String() == dstIPNet.String() {
