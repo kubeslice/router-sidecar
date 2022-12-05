@@ -136,7 +136,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	if err != nil {
 		return err
 	}
-	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	routes, err := netlink.RouteList(nil, netlink.FAMILY_ALL)
 	if err != nil {
 		return err
 	}
