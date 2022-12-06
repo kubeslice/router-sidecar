@@ -170,9 +170,9 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	logger.GlobalLogger.Info("ecmpRoutes after update", "ecmpRoutes", ecmpRoutes)
 	
 	if len(updatedMultiPath) == 1{
-		err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, Gw: updatedMultiPath[0].Gw})
+		err = netlink.RouteAdd(&netlink.Route{Dst: dstIPNet, Gw: updatedMultiPath[0].Gw})
 	} else {
-		err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
+		err = netlink.RouteAddEcmp(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
 	}
 	if err != nil {
 		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
