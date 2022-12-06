@@ -149,43 +149,43 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 		}
 	}
 	if len(ecmpRoutes) == 0 {
-		// if only a single route is present , ecmpRoutes is empty
-		// should we still search for the route ?
-		// Get the nsm interface
-		links, err := netlink.LinkList()
-		if err != nil {
-			logger.GlobalLogger.Errorf("Could not get link list, Err: %v", err)
-			return err
-		}
+		// // if only a single route is present , ecmpRoutes is empty
+		// // should we still search for the route ?
+		// // Get the nsm interface
+		// links, err := netlink.LinkList()
+		// if err != nil {
+		// 	logger.GlobalLogger.Errorf("Could not get link list, Err: %v", err)
+		// 	return err
+		// }
 
-		for _, link := range links {
-			isRouteRemove := false
-			if strings.HasPrefix(link.Attrs().Name, "nsm") {
-				// Get the routes
-				logger.GlobalLogger.Info("link name","link",link.Attrs().Name)
-				routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
-				if err != nil {
-					return err
-				}
-				logger.GlobalLogger.Info("routes list inside", "routes", routes)
-				// range throw the routes
-				for _, route := range routes {
-					if route.Gw.String() == NsmIPToRemove {
-						// remove the route
-						err := netlink.RouteDel(&route)
-						if err != nil {
-							logger.GlobalLogger.Errorf("Unable to delete route, Err: %v", err)
-							return err
-						}
-						// route is removed
-						isRouteRemove = true
-					}
-				}
-			}
-			if isRouteRemove {
-				break
-			}
-		}
+		// for _, link := range links {
+		// 	isRouteRemove := false
+		// 	if strings.HasPrefix(link.Attrs().Name, "nsm") {
+		// 		// Get the routes
+		// 		logger.GlobalLogger.Info("link name","link",link.Attrs().Name)
+		// 		routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		logger.GlobalLogger.Info("routes list inside", "routes", routes)
+		// 		// range throw the routes
+		// 		for _, route := range routes {
+		// 			if route.Gw.String() == NsmIPToRemove {
+		// 				// remove the route
+		// 				err := netlink.RouteDel(&route)
+		// 				if err != nil {
+		// 					logger.GlobalLogger.Errorf("Unable to delete route, Err: %v", err)
+		// 					return err
+		// 				}
+		// 				// route is removed
+		// 				isRouteRemove = true
+		// 			}
+		// 		}
+		// 	}
+		// 	if isRouteRemove {
+		// 		break
+		// 	}
+		// }
 		return nil
 	}
 	logger.GlobalLogger.Info("ecmpRoutes", "ecmpRoutes", ecmpRoutes)
@@ -197,7 +197,14 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	if len(updatedMultiPath) == 1 {
 		err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, Gw: updatedMultiPath[0].Gw})
 	} else {
+		err := netlink.RouteDel(&netlink.Route{Dst: dstIPNet})
+		if err != nil {
+			return err
+		}
 		err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
+		if err != nil {
+			return err
+		}
 	}
 	if err != nil {
 		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
