@@ -22,6 +22,7 @@ import (
 
 	"github.com/kubeslice/router-sidecar/pkg/logger"
 	sidecar "github.com/kubeslice/router-sidecar/pkg/sidecar/sidecarpb"
+	"github.com/vishvananda/netlink"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -45,12 +46,18 @@ func (s *SliceRouterSidecar) UpdateSliceGwConnectionContext(ctx context.Context,
 	if conContext.GetRemoteSliceGwNsmSubnet() == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid Remote Slice Gateway Subnet")
 	}
-	if len(conContext.GetLocalNsmGwPeerIPList()) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid Local NSM Gateway Peer IPs")
-	}
+	// if len(conContext.GetLocalNsmGwPeerIPList()) == 0 {
+	// 	return nil, status.Errorf(codes.InvalidArgument, "Invalid Local NSM Gateway Peer IPs")
+	// }
 	logger.GlobalLogger.Infof("conContext UpdateSliceGwConnectionContext : %v", conContext)
 
-	err := sliceRouterInjectRoute(conContext.GetRemoteSliceGwNsmSubnet(), conContext.GetLocalNsmGwPeerIPList())
+	// Build a map of existing routes in the vl3
+	installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	logger.GlobalLogger.Info("installedRoutes","installedRoutes",installedRoutes)
+	if err != nil {
+		return nil,err
+	}
+	err = sliceRouterInjectRoute(conContext.GetRemoteSliceGwNsmSubnet(), conContext.GetLocalNsmGwPeerIPList())
 	if err != nil {
 		logger.GlobalLogger.Errorf("Failed to add route in slice router: %v", err)
 	} else {
