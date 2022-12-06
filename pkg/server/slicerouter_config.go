@@ -35,9 +35,10 @@ import (
 	"go.ligato.io/vpp-agent/v3/proto/ligato/vpp"
 	vpp_l3 "go.ligato.io/vpp-agent/v3/proto/ligato/vpp/l3"
 
+	"sync"
+
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
-	"sync"
 )
 
 const (
@@ -140,7 +141,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	if err != nil {
 		return err
 	}
-	logger.GlobalLogger.Info("routes list","routes",routes)
+	logger.GlobalLogger.Info("routes list", "routes", routes)
 	ecmpRoutes := make([]*netlink.NexthopInfo, 0)
 	for _, route := range routes {
 		if route.Dst.String() == dstIPNet.String() {
@@ -150,15 +151,36 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	if len(ecmpRoutes) == 0 {
 		// if only a single route is present , ecmpRoutes is empty
 		// should we still search for the route ?
-		for _,route := range routes {
-			logger.GlobalLogger.Info("ranging routes","routes",route)
-			if route.Gw.String() == NsmIPToRemove{
-				// remove the route
-				err := netlink.RouteDel(&route)
+		// Get the nsm interface
+		links, err := netlink.LinkList()
+		if err != nil {
+			logger.GlobalLogger.Errorf("Could not get link list, Err: %v", err)
+		}
+
+		for _, link := range links {
+			isRouteRemove := false
+			if strings.HasPrefix(link.Attrs().Name, "nsm") {
+				// Get the routes
+				routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
 				if err != nil {
-					logger.GlobalLogger.Errorf("Unable to delete route, Err: %v", err)
 					return err
 				}
+				// range throw the routes
+				for _, route := range routes {
+					if route.Gw.String() == NsmIPToRemove {
+						// remove the route
+						err := netlink.RouteDel(&route)
+						if err != nil {
+							logger.GlobalLogger.Errorf("Unable to delete route, Err: %v", err)
+							return err
+						}
+						// route is removed
+						isRouteRemove = true
+					}
+				}
+			}
+			if isRouteRemove {
+				break
 			}
 		}
 		return nil
@@ -168,8 +190,8 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	updatedMultiPath, _ := updateMultipath(ecmpRoutes, NsmIPToRemove)
 	logger.GlobalLogger.Info("updatedMultiPath", "updatedMultiPath", updatedMultiPath)
 	logger.GlobalLogger.Info("ecmpRoutes after update", "ecmpRoutes", ecmpRoutes)
-	
-	if len(updatedMultiPath) == 1{
+
+	if len(updatedMultiPath) == 1 {
 		err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, Gw: updatedMultiPath[0].Gw})
 	} else {
 		err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
