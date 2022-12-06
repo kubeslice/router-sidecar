@@ -137,7 +137,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	if err != nil {
 		return err
 	}
-	routes, err := netlink.RouteList(nil, netlink.FAMILY_ALL)
+	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 	if err != nil {
 		return err
 	}
@@ -189,8 +189,8 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 		return nil
 	}
 	logger.GlobalLogger.Info("ecmpRoutes", "ecmpRoutes", ecmpRoutes)
-
-	updatedMultiPath, _ := updateMultipath(ecmpRoutes, NsmIPToRemove)
+	ecmpRoutesCopy := ecmpRoutes
+	updatedMultiPath, _ := updateMultipath(ecmpRoutesCopy, NsmIPToRemove)
 	logger.GlobalLogger.Info("updatedMultiPath", "updatedMultiPath", updatedMultiPath)
 	logger.GlobalLogger.Info("ecmpRoutes after update", "ecmpRoutes", ecmpRoutes)
 
