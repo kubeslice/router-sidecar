@@ -177,6 +177,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 							logger.GlobalLogger.Errorf("Unable to delete route, Err: %v", err)
 							return err
 						}
+						remoteSubnetRouteMap.Delete(dstIP)
 						// route is removed
 						isRouteRemove = true
 					}
