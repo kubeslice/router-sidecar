@@ -162,7 +162,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 			isRouteRemove := false
 			if strings.HasPrefix(link.Attrs().Name, "nsm") {
 				// Get the routes
-				logger.GlobalLogger.Info("link name","link",link.Attrs().Name)
+				logger.GlobalLogger.Info("link name","link",link.Attrs().Name,"link index",link.Attrs().Index)
 				routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
 				if err != nil {
 					return err
