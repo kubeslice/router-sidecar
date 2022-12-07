@@ -190,30 +190,17 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 		return nil
 	}
 	logger.GlobalLogger.Info("ecmpRoutes", "ecmpRoutes", ecmpRoutes)
-	ecmpRoutesCopy := ecmpRoutes
-	updatedMultiPath, _ := updateMultipath(ecmpRoutesCopy, NsmIPToRemove)
+	updatedMultiPath, _ := updateMultipath(ecmpRoutes, NsmIPToRemove)
 	logger.GlobalLogger.Info("updatedMultiPath", "updatedMultiPath", updatedMultiPath)
 	logger.GlobalLogger.Info("ecmpRoutes after update", "ecmpRoutes", ecmpRoutes)
 
-	if len(updatedMultiPath) == 1 {
-		err := netlink.RouteDel(&netlink.Route{Dst: dstIPNet})
-		if err != nil {
-			return err
-		}
-		err = netlink.RouteAdd(&netlink.Route{Dst: dstIPNet, Gw: updatedMultiPath[0].Gw})
-		if err != nil {
-			return err
-		}
-	} else {
-		err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
-		if err != nil {
-			return err
-		}
-	}
+	
+	err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
 	if err != nil {
 		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
 		return err
 	}
+	
 	remoteSubnetRouteMap.Store(dstIP, contructArrayFromNextHop(updatedMultiPath))
 	logger.GlobalLogger.Info("remoteSubnetRouteMap", "remoteSubnetRouteMap", remoteSubnetRouteMap)
 	return nil
