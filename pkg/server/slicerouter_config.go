@@ -20,6 +20,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -351,7 +352,31 @@ func vl3GetRouteInKernel(dstIP string, nsmIP string) (bool, error) {
 		}
 	}
 	if len(ecmpRoutes) == 0 {
-		return false, errors.New("ecmp routes not yet present")
+		links, err := netlink.LinkList()
+		if err != nil {
+			logger.GlobalLogger.Errorf("Could not get link list, Err: %v", err)
+			return false,err
+		}
+
+		for _, link := range links {
+			if strings.HasPrefix(link.Attrs().Name, "nsm") {
+				// Get the routes
+				logger.GlobalLogger.Info("link name","link",link.Attrs().Name,"link index",link.Attrs().Index)
+				routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
+				if err != nil {
+					return false,err
+				}
+				logger.GlobalLogger.Info("routes list inside", "routes", routes)
+				// range throw the routes
+				for _, route := range routes {
+					if route.Gw.String() == nsmIP {
+						// route with Dst=nsmIP is added in routing table
+						return true,nil
+					}
+				}
+			}
+		}
+		return false,errors.New(fmt.Errorf("route with Dst=%s not yet present",nsmIP).Error())
 	}
 
 	logger.GlobalLogger.Info("ranging over ecmp routes", ecmpRoutes)
