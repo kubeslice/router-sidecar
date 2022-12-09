@@ -54,6 +54,8 @@ func dialer() func(context.Context, string) (net.Conn, error) {
 
 func TestRouterConnClientInfo(t *testing.T) {
 
+	remoteSubnetRouteMap = make(map[string][]string)
+
 	connList := []*pb.ConnectionInfo{}
 	connInfo := pb.ConnectionInfo{
 		PodName:      "podname",

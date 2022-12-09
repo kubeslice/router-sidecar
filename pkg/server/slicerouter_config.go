@@ -47,7 +47,7 @@ const (
 
 // remoteSubnetRouteMap holds all the routes that were injected by the vL3 sidecar into the
 // vL3 routing table.
-var remoteSubnetRouteMap map[string]string
+var remoteSubnetRouteMap map[string][]string
 
 // Records the last time the routing table in the slice router was reconciled.
 var lastRoutingTableReconcileTime time.Time
@@ -112,21 +112,19 @@ func vl3DeleteRouteInVpp(dstIP string, nextHopIP string) error {
 	return sendConfigToVppAgent(vppconfig, true)
 }
 
-func vl3InjectRouteInKernel(dstIP string, nextHopIP string) error {
+func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo) error {
 	_, dstIPNet, err := net.ParseCIDR(dstIP)
 	if err != nil {
 		return err
 	}
-	gwIP := net.ParseIP(nextHopIP)
 
-	route := netlink.Route{Dst: dstIPNet, Gw: gwIP}
+	route := netlink.Route{Dst: dstIPNet, MultiPath: nextHopIPSlice}
 
-	if err := netlink.RouteReplace(&route); err != nil {
-		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, gwIP, err)
+	if err := netlink.RouteAddEcmp(&route); err != nil {
+		logger.GlobalLogger.Errorf("Route add failed in kernel. Dst: %v, NextHop: %v, Err: %v", dstIPNet, nextHopIPSlice, err)
 		return err
 	}
-
-	logger.GlobalLogger.Infof("Route added successfully in the kernel. Dst: %v, NextHop: %v", dstIPNet, gwIP)
+	logger.GlobalLogger.Infof("Route added successfully in the kernel. Dst: %v, NextHop: %v", dstIPNet, nextHopIPSlice)
 
 	return nil
 }
@@ -244,7 +242,7 @@ func vl3ReconcileRoutesInKernel() error {
 		return err
 	}
 
-	routeMap := make(map[string]netlink.Route)
+	routeMap := make(map[string][]netlink.Route)
 	for _, route := range installedRoutes {
 		// Default route will have a Dst of nil so it is
 		// important to have a null check here. Else we will
@@ -252,23 +250,44 @@ func vl3ReconcileRoutesInKernel() error {
 		if route.Dst == nil {
 			continue
 		}
-		routeMap[route.Dst.String()] = route
+		routeMap[route.Dst.String()] = append(routeMap[route.Dst.String()], route)
 	}
+	logger.GlobalLogger.Infof("installed Route: %v", installedRoutes)
 	logger.GlobalLogger.Infof("Route map: %v", routeMap)
 	logger.GlobalLogger.Infof("Slice Route map: %v", remoteSubnetRouteMap)
 
-	for remoteSubnet, nextHop := range remoteSubnetRouteMap {
-		_, ok := routeMap[remoteSubnet]
-		// If the route is absent or the nexthop is incorrect, reinstall the route.
-		if !ok || routeMap[remoteSubnet].Gw.String() != nextHop {
-			logger.GlobalLogger.Infof("Installed route does not reflect slice state. Reconciling dst: %v, gw: %v", remoteSubnet, nextHop)
-			err := vl3InjectRouteInKernel(remoteSubnet, nextHop)
-			if err != nil {
-				logger.GlobalLogger.Errorf("Failed to install route: dst: %v, gw: %v", remoteSubnet, nextHop)
+	nextHopInfoSlice := []*netlink.NexthopInfo{}
+
+	for remoteSubnet, nextHopList := range remoteSubnetRouteMap {
+		// avoid injecting routes if route map is empty
+		if len(routeMap[remoteSubnet]) == 0 {
+			break
+		}
+		for _, ip := range nextHopList {
+			_, ok := routeMap[remoteSubnet]
+			// If the route is absent or nexthop is incorrect, reinstall the route.
+			if !ok || containsRoute(routeMap[remoteSubnet], ip) {
+				gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(ip)}
+				nextHopInfoSlice = append(nextHopInfoSlice, gwObj)
+
+				logger.GlobalLogger.Infof("Installed route does not reflect slice state. Reconciling dst: %v, gw: %v", remoteSubnet, nextHopInfoSlice)
+				err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
+				if err != nil {
+					logger.GlobalLogger.Errorf("Failed to install route: dst: %v, gw: %v", remoteSubnet, nextHopInfoSlice)
+				}
 			}
 		}
 	}
 	return nil
+}
+
+func getNextHopInfoSlice(nextHopIPList []string) []*netlink.NexthopInfo {
+	nextHopIpSlice := []*netlink.NexthopInfo{}
+	for _, ip := range nextHopIPList {
+		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(ip)}
+		nextHopIpSlice = append(nextHopIpSlice, gwObj)
+	}
+	return nextHopIpSlice
 }
 
 func sliceRouterReconcileRoutingTable() error {
@@ -281,58 +300,78 @@ func sliceRouterReconcileRoutingTable() error {
 
 // Function to inject remote cluster subnet routes into the local slice router.
 // The next hop IP would be the IP address of the slice-gw that connects to the remote cluster.
-func sliceRouterInjectRoute(remoteSubnet string, nextHopIP string) error {
-	if time.Since(lastRoutingTableReconcileTime).Seconds() < routingTableReconcileInterval {
-		logger.GlobalLogger.Info("Skipping reconcilation, haven't crossed the reconciliation interval yet.")
-		return nil
+func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
+	logger.GlobalLogger.Infof("Received NSM IPS from operator: %v", nextHopIPList)
+	if time.Since(lastRoutingTableReconcileTime).Seconds() > routingTableReconcileInterval {
+		err := sliceRouterReconcileRoutingTable()
+		if err != nil {
+			logger.GlobalLogger.Errorf("Failed to reconcile routing table: %v", err)
+		}
+
+		lastRoutingTableReconcileTime = time.Now()
+
+		logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
 	}
-
-	err := sliceRouterReconcileRoutingTable()
-	if err != nil {
-		logger.GlobalLogger.Errorf("Failed to reconcile routing table: %v", err)
-	}
-
-	lastRoutingTableReconcileTime = time.Now()
-
-	logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
 
 	_, routePresent := remoteSubnetRouteMap[remoteSubnet]
-	if routePresent && remoteSubnetRouteMap[remoteSubnet] == nextHopIP {
-		logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
-			remoteSubnet, nextHopIP)
-		return nil
-	}
+	nextHopInfoSlice := getNextHopInfoSlice(nextHopIPList)
 
-	if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
-		// If a route was previously installed for the remote subnet then we should
-		// delete it before adding a route with a new nexthop IP.
-		// VPP treats a route modify as a route add operation, creating multiple
-		// entries for a destination prefix and treating them as equal cost multipath
-		// routes.
-		// In our case, we should have only one route with the nexthop as the nsm IP on
-		// the slice gw pod connecting the remote subnet.
-		if remoteSubnetRouteMap[remoteSubnet] != "" {
-			err := vl3DeleteRouteInVpp(remoteSubnet, remoteSubnetRouteMap[remoteSubnet])
+	for i := 0; i < len(nextHopIPList); i++ {
+
+		if routePresent && checkRouteAdd(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i]) {
+			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
+				remoteSubnet, nextHopIPList[i])
+			continue
+		}
+
+		if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
+			// If a route was previously installed for the remote subnet then we should
+			// delete it before adding a route with a new nexthop IP.
+			// VPP treats a route modify as a route add operation, creating multiple
+			// entries for a destination prefix and treating them as equal cost multipath
+			// routes.
+			// In our case, we should have only one route with the nexthop as the nsm IP on
+			// the slice gw pod connecting the remote subnet.
+			if len(remoteSubnetRouteMap[remoteSubnet]) != 0 {
+				err := vl3DeleteRouteInVpp(remoteSubnet, remoteSubnetRouteMap[remoteSubnet][i])
+				if err != nil {
+					logger.GlobalLogger.Errorf("Failed to delete route with old gw IP. RemoteSubent: %v, NextHop: %v",
+						remoteSubnet, remoteSubnetRouteMap[remoteSubnet][i])
+				}
+			}
+			err := vl3InjectRouteInVpp(remoteSubnet, nextHopIPList[i])
 			if err != nil {
-				logger.GlobalLogger.Errorf("Failed to delete route with old gw IP. RemoteSubent: %v, NextHop: %v",
-					remoteSubnet, remoteSubnetRouteMap[remoteSubnet])
-				return err
+				logger.GlobalLogger.Errorf("Failed to inject route in vpp: %v", err)
+			}
+		} else {
+			err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
+			if err != nil {
+				logger.GlobalLogger.Errorf("Failed to inject route in kernel: %v", err)
 			}
 		}
-		err := vl3InjectRouteInVpp(remoteSubnet, nextHopIP)
-		if err != nil {
-			return err
-		}
-	} else {
-		err := vl3InjectRouteInKernel(remoteSubnet, nextHopIP)
-		if err != nil {
-			return err
+		remoteSubnetRouteMap[remoteSubnet] = append(remoteSubnetRouteMap[remoteSubnet], nextHopIPList[i])
+	}
+	return nil
+}
+func checkRouteAdd(nextHopIpList []string, s string) bool {
+
+	// 1, 5
+
+	for _, nextHop := range nextHopIpList {
+		if nextHop == s {
+			return true
 		}
 	}
+	return false
+}
 
-	remoteSubnetRouteMap[remoteSubnet] = nextHopIP
-
-	return nil
+func containsRoute(nextHopIpList []netlink.Route, s string) bool {
+	for _, nextHop := range nextHopIpList {
+		if nextHop.Gw.String() == s {
+			return true
+		}
+	}
+	return false
 }
 
 func sliceRouterGetClientConnections() ([]*sidecar.ConnectionInfo, error) {
@@ -356,8 +395,13 @@ func BootstrapSliceRouterPod() error {
 			logger.GlobalLogger.Fatalf("Failed to enable IP forwarding in the kernel", err)
 			return err
 		}
+		err = sysctl.Set("net.ipv4.fib_multipath_hash_policy", "1")
+		if err != nil {
+			logger.GlobalLogger.Fatalf("failed to set hash policy to L4 for mutipath routes", err)
+			return err
+		}
 	}
-	remoteSubnetRouteMap = make(map[string]string)
+	remoteSubnetRouteMap = make(map[string][]string)
 	lastRoutingTableReconcileTime = time.Now()
 	return nil
 }
