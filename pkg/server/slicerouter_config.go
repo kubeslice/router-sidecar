@@ -531,14 +531,19 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 				continue
 			}
 		}
-		nextHopList, ok := remoteSubnetRouteMap.Load(remoteSubnet)
-		if ok {
-			remoteSubnetRouteMap.Store(remoteSubnet, append(nextHopList.([]string), nextHopIPList[i]))
-		} else {
-			remoteSubnetRouteMap.Store(remoteSubnet, []string{nextHopIPList[i]})
+	}
+	// at the end of for loop , the global map should contain the routes that are installed
+	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	if err != nil {
+		return err
+	}
+	ecmpRoutes := make([]*netlink.NexthopInfo, 0)
+	for _, route := range routes {
+		if route.Dst.String() == remoteSubnet {
+			ecmpRoutes = route.MultiPath
 		}
 	}
-	
+	remoteSubnetRouteMap.Store(remoteSubnet,contructArrayFromNextHop(ecmpRoutes))
 	return nil
 }
 func checkRouteAdd(nextHopIpList []string, s string) bool {
