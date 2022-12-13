@@ -169,7 +169,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 					return err
 				}
 				logger.GlobalLogger.Info("routes list inside", "routes", routes)
-				// range throw the routes
+				// range through the routes
 				for _, route := range routes {
 					if route.Gw.String() == NsmIPToRemove {
 						// remove the route
@@ -203,7 +203,8 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 	}
 	
 	remoteSubnetRouteMap.Store(dstIP, contructArrayFromNextHop(updatedMultiPath))
-	logger.GlobalLogger.Info("remoteSubnetRouteMap", "remoteSubnetRouteMap", remoteSubnetRouteMap)
+	nextHops,_ := remoteSubnetRouteMap.Load(dstIP)
+	logger.GlobalLogger.Info("remoteSubnetRouteMap", "remoteSubnetRouteMap", nextHops.([]string))
 	return nil
 }
 
@@ -537,6 +538,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			remoteSubnetRouteMap.Store(remoteSubnet, []string{nextHopIPList[i]})
 		}
 	}
+	
 	return nil
 }
 func checkRouteAdd(nextHopIpList []string, s string) bool {

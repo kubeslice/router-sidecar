@@ -53,7 +53,7 @@ func (s *SliceRouterSidecar) UpdateSliceGwConnectionContext(ctx context.Context,
 
 	// Build a map of existing routes in the vl3
 	installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
-	logger.GlobalLogger.Info("installedRoutes","installedRoutes",installedRoutes)
+	logger.GlobalLogger.Info("installedRoutes ","installedRoutes ",installedRoutes)
 	if err != nil {
 		return nil,err
 	}
