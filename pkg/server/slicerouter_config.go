@@ -127,11 +127,9 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIP string) error {
 
 	var linkIdx int = -1
 	for _, route := range installedRoutes {
-		logger.GlobalLogger.Errorf("Route: %v", route)
 		if route.Dst == nil {
 			continue
 		}
-		logger.GlobalLogger.Errorf("Route: %v, dst: %s, nh: %s", route, route.Dst.String(), nextHopIP)
 		// Default route will have a Dst of nil so it is
 		// important to have a null check here. Else we will
 		// crash trying to deref a null pointer.
