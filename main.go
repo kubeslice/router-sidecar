@@ -49,6 +49,7 @@ func startGrpcServer(grpcPort string) error {
 		logger.GlobalLogger.Errorf("Start GRPC Server Failed with %v", err.Error())
 		return err
 	}
+
 	logger.GlobalLogger.Infof("GRPC Server exited gracefully")
 
 	return nil
