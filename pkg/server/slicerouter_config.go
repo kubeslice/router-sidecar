@@ -437,25 +437,28 @@ func vl3ReconcileRoutesInKernel() error {
 
 func getNextHopInfoSlice(nextHopIPList []string) ([]*netlink.NexthopInfo, error) {
 	nextHopIpSlice := []*netlink.NexthopInfo{}
-	installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
-	if err != nil {
-		return nil, err
-	}
-
-	var linkIdx int = -1
-	for _, route := range installedRoutes {
-		if route.Dst == nil {
-			continue
+	for _, nextHopIP := range nextHopIPList {
+		installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+		if err != nil {
+			return nil, err
 		}
-		// Default route will have a Dst of nil so it is
-		// important to have a null check here. Else we will
-		// crash trying to deref a null pointer.
-		for _, nextHopIP := range nextHopIPList {
+		var linkIdx int = -1
+		for _, route := range installedRoutes {
+			if route.Dst == nil {
+				continue
+			}
+			// Default route will have a Dst of nil so it is
+			// important to have a null check here. Else we will
+			// crash trying to deref a null pointer.
 			if route.Dst.String() == nextHopIP+"/32" {
 				linkIdx = route.LinkIndex
 				gwObj := &netlink.NexthopInfo{LinkIndex: linkIdx, Gw: net.ParseIP(nextHopIP), Flags: int(netlink.FLAG_ONLINK)}
 				nextHopIpSlice = append(nextHopIpSlice, gwObj)
+				break
 			}
+		}
+		if linkIdx == -1 {
+			return nil, errors.New(fmt.Sprintf("link idx of nexthop not found for %v", nextHopIP))
 		}
 	}
 	return nextHopIpSlice, nil
