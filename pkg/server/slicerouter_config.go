@@ -450,7 +450,7 @@ func getNextHopInfoSlice(nextHopIPList []string) ([]*netlink.NexthopInfo, error)
 			// Default route will have a Dst of nil so it is
 			// important to have a null check here. Else we will
 			// crash trying to deref a null pointer.
-			fmt.Println("route","route",route)
+			logger.GlobalLogger.Info("route","route",route)
 			if route.Dst.String() == nextHopIP+"/32" {
 				linkIdx = route.LinkIndex
 				gwObj := &netlink.NexthopInfo{LinkIndex: linkIdx, Gw: net.ParseIP(nextHopIP), Flags: int(netlink.FLAG_ONLINK)}
