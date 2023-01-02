@@ -438,7 +438,7 @@ func vl3ReconcileRoutesInKernel() error {
 func getNextHopInfoSlice(nextHopIPList []string) ([]*netlink.NexthopInfo, error) {
 	nextHopIpSlice := []*netlink.NexthopInfo{}
 	for _, nextHopIP := range nextHopIPList {
-		installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_ALL)
+		installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 		logger.GlobalLogger.Info("route","route",installedRoutes)
 		if err != nil {
 			return nil, err
