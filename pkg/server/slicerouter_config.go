@@ -148,6 +148,7 @@ func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
 			ecmpRoutes = route.MultiPath
 		}
 	}
+	//TODO:(check if this is required?)
 	if len(ecmpRoutes) == 0 {
 		// // if only a single route is present , ecmpRoutes is empty
 		// // should we still search for the route ?
@@ -356,7 +357,7 @@ func vl3GetRouteInKernel(dstIP string, nsmIP string) (bool, error) {
 		}
 
 		for _, link := range links {
-			if strings.HasPrefix(link.Attrs().Name, "nsm") {
+			if strings.HasPrefix(link.Attrs().Name, "vl3") {
 				// Get the routes
 				logger.GlobalLogger.Info("link name", "link", link.Attrs().Name, "link index", link.Attrs().Index)
 				routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
@@ -439,7 +440,6 @@ func getNextHopInfoSlice(nextHopIPList []string) ([]*netlink.NexthopInfo, error)
 	nextHopIpSlice := []*netlink.NexthopInfo{}
 	for _, nextHopIP := range nextHopIPList {
 		installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
-		logger.GlobalLogger.Info("route","route",installedRoutes)
 		if err != nil {
 			return nil, err
 		}
@@ -451,7 +451,6 @@ func getNextHopInfoSlice(nextHopIPList []string) ([]*netlink.NexthopInfo, error)
 			// Default route will have a Dst of nil so it is
 			// important to have a null check here. Else we will
 			// crash trying to deref a null pointer.
-			logger.GlobalLogger.Info("route","route",route)
 			if route.Dst.String() == nextHopIP+"/32" {
 				linkIdx = route.LinkIndex
 				gwObj := &netlink.NexthopInfo{LinkIndex: linkIdx, Gw: net.ParseIP(nextHopIP), Flags: int(netlink.FLAG_ONLINK)}
@@ -553,7 +552,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			}
 		}
 	}
-	// at the end of for loop , the global map should contain the routes that are installed
+	// at the end of for loop , the global map should contain the exact routes that are installed
 	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 	if err != nil {
 		return err
