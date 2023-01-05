@@ -1,25 +1,25 @@
 # router-sidecar
 
-
 * The Slice Router is a network service component that provides a virtual L3 IP routing functionality within a cluster for the Slice overlay network.
 * Each slice in a cluster has one slice router with the possibility of a redundant pair option. 
 * The Slice Operator manages the lifecycle of a Slice Router by overseeing the deployment, configuration, continuous monitoring, and management of the Slice Router.
 * The Slice Router provides a full mesh network connectivity between the application pods and slice gateway pods in a cluster. 
 
 ## Getting Started 
-It is strongly recommended to use a released version.
 
-For information on installing KubeSlice on kind clusters, see [getting started with kind clusters](https://docs.avesha.io/documentation/open-source/0.2.0/getting-started-with-kind-clusters) or try out the example script in [kind-based example](https://github.com/kubeslice/examples/tree/master/kind).
+Please refer to our documentation on:
+- [Installing KubeSlice on cloud clusters](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/installing-kubeslice/installing-the-kubeslice-controller).
+- [Installing KubeSlice on kind clusters](https://kubeslice.io/documentation/open-source/0.5.0/tutorials/kind-install-kubeslice-controller).
 
-For information on installing KubeSlice on cloud clusters, see [getting started with cloud clusters](https://docs.avesha.io/documentation/open-source/0.2.0/getting-started-with-cloud-clusters).
-
+Try our the example script in [kind-based example](https://github.com/kubeslice/examples/tree/master/kind).
 
 ### Prerequisites
-
-* Docker installed and running in your local machine.
-* A running [`kind`](https://kind.sigs.k8s.io/)
-* [`kubectl`](https://kubernetes.io/docs/tasks/tools/) installed and configured
-* Follow the getting started from above, to install [`kubeslice-controller`](https://github.com/kubeslice/kubeslice-controller) and [`worker-operator`](https://github.com/kubeslice/worker-operator).
+Before you begin, make sure the following prerequisites are met:
+* Docker is installed and running on your local machine.
+* A running [`kind`](https://kind.sigs.k8s.io/).
+* [`kubectl`](https://kubernetes.io/docs/tasks/tools/) is installed and configured.
+* You have prepared the environment to install [`kubeslice-controller`](https://github.com/kubeslice/kubeslice-controller) on the controller cluster
+ and [`worker-operator`](https://github.com/kubeslice/worker-operator) on the worker cluster. For more information, see [Prerequisites](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/prerequisites/).
 
 # Local Build and Update 
 
@@ -52,8 +52,8 @@ git clone https://github.com/kubeslice/router-sidecar.git
 cd router-sidecar
 ```
 
-2. Adjust `VERSION` variable in the Makefile to change the docker tag to be built.
-   Image is set as `docker.io/aveshasystems/router-sidecar:$(VERSION)` in the Makefile. Change this if required
+2. Adjust the `VERSION` variable in the Makefile to change the docker tag to be built.
+   Image is set as `docker.io/aveshasystems/router-sidecar:$(VERSION)` in the Makefile. Change this if required.
 
 ```console
 make docker-build
@@ -87,7 +87,7 @@ docker exec -it kind-control-plane crictl images
 
 ### Deploy in a Cluster
 
-Update chart values file `yourvaluesfile.yaml` that you have previously created.
+Update the chart values file, `yourvaluesfile.yaml` that you have previously created.
 Refer to [values.yaml](https://github.com/kubeslice/charts/blob/master/charts/kubeslice-worker/values.yaml) to create `yourvaluesfiel.yaml` and update the routerSidecar image subsection to use the local image.
 
 From the sample:
@@ -112,7 +112,8 @@ Deploy the Updated Chart
 make chart-deploy VALUESFILE=yourvaluesfile.yaml
 ```
 
-### Verify the router-sidecar Pods are Running
+### Verify the Installation
+Verify the installation by checking the status of router-sidecar pods belonging to the `kubeslice-system` namespace.
 
 ```bash
 kubectl get pods -n kubeslice-system | grep vl3-slice-* 
