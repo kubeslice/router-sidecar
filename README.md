@@ -1,13 +1,11 @@
 # router-sidecar
 
-
 * The Slice Router is a network service component that provides a virtual L3 IP routing functionality within a cluster for the Slice overlay network.
 * Each slice in a cluster has one slice router with the possibility of a redundant pair option. 
 * The Slice Operator manages the lifecycle of a Slice Router by overseeing the deployment, configuration, continuous monitoring, and management of the Slice Router.
 * The Slice Router provides a full mesh network connectivity between the application pods and slice gateway pods in a cluster. 
 
 ## Getting Started 
-It is strongly recommended to use a released version.
 
 Please refer to our documentation on:
 - [Installing KubeSlice on cloud clusters](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/installing-kubeslice/installing-the-kubeslice-controller).
@@ -20,7 +18,7 @@ Before you begin, make sure the following prerequisites are met:
 * Docker is installed and running on your local machine.
 * A running [`kind`](https://kind.sigs.k8s.io/).
 * [`kubectl`](https://kubernetes.io/docs/tasks/tools/) is installed and configured.
-* You have prepared the environment for the installation of [`kubeslice-controller`](https://github.com/kubeslice/kubeslice-controller) on the controller cluster
+* You have prepared the environment to install [`kubeslice-controller`](https://github.com/kubeslice/kubeslice-controller) on the controller cluster
  and [`worker-operator`](https://github.com/kubeslice/worker-operator) on the worker cluster. For more information, see [Prerequisites](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/prerequisites/).
 
 # Local Build and Update 
@@ -55,7 +53,7 @@ cd router-sidecar
 ```
 
 2. Adjust the `VERSION` variable in the Makefile to change the docker tag to be built.
-   Image is set as `docker.io/aveshasystems/router-sidecar:$(VERSION)` in the Makefile. Change this if required
+   Image is set as `docker.io/aveshasystems/router-sidecar:$(VERSION)` in the Makefile. Change this if required.
 
 ```console
 make docker-build
@@ -89,7 +87,7 @@ docker exec -it kind-control-plane crictl images
 
 ### Deploy in a Cluster
 
-Update the chart values file `yourvaluesfile.yaml` that you have previously created.
+Update the chart values file, `yourvaluesfile.yaml` that you have previously created.
 Refer to [values.yaml](https://github.com/kubeslice/charts/blob/master/charts/kubeslice-worker/values.yaml) to create `yourvaluesfiel.yaml` and update the routerSidecar image subsection to use the local image.
 
 From the sample:
@@ -115,7 +113,7 @@ make chart-deploy VALUESFILE=yourvaluesfile.yaml
 ```
 
 ### Verify the Installation
-verify the installation by checking the status of router-sidecar pods belonging to the `kubeslice-system` namespace.
+Verify the installation by checking the status of router-sidecar pods belonging to the `kubeslice-system` namespace.
 
 ```bash
 kubectl get pods -n kubeslice-system | grep vl3-slice-* 
