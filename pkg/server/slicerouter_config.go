@@ -548,7 +548,7 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			}
 		}
 	}
-	// at the end of for loop , the global map should contain the routes that are installed
+	// at the end of for loop , the global map should contain the routes that are  installed
 	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 	if err != nil {
 		return err
