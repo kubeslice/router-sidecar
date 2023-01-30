@@ -4,6 +4,5 @@ dockerImagePipeline(
   service: 'kubeslice-router-sidecar',
   dockerfile: 'Dockerfile',
   buildContext: '.',
-  buildArguments: [PLATFORM:"amd64"]
-  
+  buildArguments: [PLATFORM:"amd64"] 
 )
