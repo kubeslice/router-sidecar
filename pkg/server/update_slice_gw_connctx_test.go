@@ -47,7 +47,7 @@ func TestUpdateConnCtx(t *testing.T) {
 	}{
 		{
 			"testing update connection context",
-			&pb.SliceGwConContext{SliceId: "SliceId", LocalSliceGwId: "LocalSliceGwId", LocalSliceGwVpnIP: LocalSliceGwVpnIP, LocalSliceGwNsmSubnet: LocalSliceGwNsmSubnet, RemoteSliceGwNsmSubnet: "192.168.1.1/24", LocalSliceGwHostType: pb.SliceGwHostType_SLICE_GW_CLIENT, LocalNsmGwPeerIP: "192.156.1.1"},
+			&pb.SliceGwConContext{SliceId: "SliceId", LocalNsmGwPeerIPList: []string{"192.168.1.1", "192.168.1.2"}, LocalSliceGwId: "LocalSliceGwId", LocalSliceGwVpnIP: LocalSliceGwVpnIP, LocalSliceGwNsmSubnet: LocalSliceGwNsmSubnet, RemoteSliceGwNsmSubnet: "192.168.1.1/24", LocalSliceGwHostType: pb.SliceGwHostType_SLICE_GW_CLIENT, LocalNsmGwPeerIP: "192.156.1.1"},
 			&pb.SidecarResponse{StatusMsg: "Slice Gw Connection Context Updated Successfully"},
 			codes.InvalidArgument,
 			"",
@@ -62,11 +62,11 @@ func TestUpdateConnCtx(t *testing.T) {
 			false,
 		},
 		{
-			"testing for Invalid Remote Slice Gateway Subnet",
-			&pb.SliceGwConContext{SliceId: "SliceId", LocalSliceGwId: "LocalSliceGwId", LocalSliceGwVpnIP: LocalSliceGwVpnIP, LocalSliceGwNsmSubnet: LocalSliceGwNsmSubnet, RemoteSliceGwNsmSubnet: "192.168.1.1/24", LocalSliceGwHostType: pb.SliceGwHostType_SLICE_GW_CLIENT, LocalNsmGwPeerIP: ""},
+			"testing for Invalid NSM Gateway Peer IP List",
+			&pb.SliceGwConContext{SliceId: "SliceId", LocalSliceGwId: "LocalSliceGwId", LocalSliceGwVpnIP: LocalSliceGwVpnIP, LocalSliceGwNsmSubnet: LocalSliceGwNsmSubnet, RemoteSliceGwNsmSubnet: "192.168.1.1/24", LocalSliceGwHostType: pb.SliceGwHostType_SLICE_GW_CLIENT, LocalNsmGwPeerIP: "192.156.1.1", LocalNsmGwPeerIPList: []string{}},
 			&pb.SidecarResponse{StatusMsg: ""},
 			codes.InvalidArgument,
-			"Invalid Local NSM Gateway Peer IP",
+			"Invalid Local NSM Gateway Peer IPs",
 			false,
 		},
 	}

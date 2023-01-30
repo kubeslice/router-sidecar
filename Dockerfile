@@ -18,7 +18,7 @@
 ##########################################################
 
 ARG PLATFORM
-FROM ${PLATFORM}/golang:1.17.7-alpine3.15 as gobuilder
+FROM ${PLATFORM}/golang:1.19.3-alpine3.17 as gobuilder
 
 # Install git.
 # Git is required for fetching the dependencies.

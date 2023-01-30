@@ -33,7 +33,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-//For initializing the buffcon
+// For initializing the buffcon
 func dialer() func(context.Context, string) (net.Conn, error) {
 
 	listner := bufconn.Listen(1024 * 1024)
