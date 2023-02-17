@@ -5,11 +5,11 @@
 * The Slice Operator manages the lifecycle of a Slice Router by overseeing the deployment, configuration, continuous monitoring, and management of the Slice Router.
 * The Slice Router provides a full mesh network connectivity between the application pods and slice gateway pods in a cluster. 
 
-## Getting Started 
+## Get Started 
 
 Please refer to our documentation on:
-- [Installing KubeSlice on cloud clusters](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/installing-kubeslice/installing-the-kubeslice-controller).
-- [Installing KubeSlice on kind clusters](https://kubeslice.io/documentation/open-source/0.5.0/tutorials/kind-install-kubeslice-controller).
+- [Install KubeSlice on cloud clusters](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/installing-kubeslice/installing-the-kubeslice-controller).
+- [Install KubeSlice on kind clusters](https://kubeslice.io/documentation/open-source/0.5.0/tutorials/kind-install-kubeslice-controller).
 
 Try our the example script in [kind-based example](https://github.com/kubeslice/examples/tree/master/kind).
 
@@ -21,9 +21,9 @@ Before you begin, make sure the following prerequisites are met:
 * You have prepared the environment to install [`kubeslice-controller`](https://github.com/kubeslice/kubeslice-controller) on the controller cluster
  and [`worker-operator`](https://github.com/kubeslice/worker-operator) on the worker cluster. For more information, see [Prerequisites](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/prerequisites/).
 
-# Local Build and Update 
+# Build and Deploy router-sidecar on a Kind Cluster 
 
-## Latest Docker Hub Image
+To download the latest router-sidecar docker hub image, click [here](https://hub.docker.com/r/aveshasystems/kubeslice-router-sidecar).
 
 ```console
 docker pull aveshasystems/kubeslice-router-sidecar:latest
@@ -47,48 +47,48 @@ helm repo update
 
 1. Clone the latest version of router-sidecar from  the `master` branch.
 
-```bash
-git clone https://github.com/kubeslice/router-sidecar.git
-cd router-sidecar
-```
+   ```bash
+   git clone https://github.com/kubeslice/router-sidecar.git
+   cd router-sidecar
+   ```
 
-2. Adjust the `VERSION` variable in the Makefile to change the docker tag to be built.
-   Image is set as `docker.io/aveshasystems/router-sidecar:$(VERSION)` in the Makefile. Change this if required.
+2. Edit the `VERSION` variable in the Makefile to change the docker tag to be built.
+   Image is set as `docker.io/aveshasystems/router-sidecar:$(VERSION)` in the Makefile. Modify this if required.
 
-```console
-make docker-build
-```
+   ```console
+   make docker-build
+   ```
 
-### Running Local Image on Kind Clusters
+### Run Local Image on a Kind Cluster
 
 1. You can load the router-sidecar docker image into the kind cluster.
 
-```bash
-kind load docker-image my-custom-image:unique-tag --name clustername
-```
+   ```bash
+   kind load docker-image my-custom-image:unique-tag --name clustername
+   ```
 
-Example
+   Example
 
-```console
-kind load docker-image aveshasystems/router-sidecar:1.2.1 --name kind
-```
+   ```console
+   kind load docker-image aveshasystems/router-sidecar:1.2.1 --name kind
+   ```
 
 2. Check the loaded image in the cluster. Modify the node name if required.
 
-```console
-docker exec -it <node-name> crictl images
-```
+   ```console
+   docker exec -it <node-name> crictl images
+   ```
 
-Example.
+   Example.
 
-```console
-docker exec -it kind-control-plane crictl images
-```
+   ```console
+   docker exec -it kind-control-plane crictl images
+   ```
 
-### Deploy in a Cluster
+### Deploy on a Cluster
 
 Update the chart values file, `yourvaluesfile.yaml` that you have previously created.
-Refer to [values.yaml](https://github.com/kubeslice/charts/blob/master/charts/kubeslice-worker/values.yaml) to create `yourvaluesfiel.yaml` and update the routerSidecar image subsection to use the local image.
+Refer to the [values.yaml](https://github.com/kubeslice/charts/blob/master/charts/kubeslice-worker/values.yaml) to create `yourvaluesfiel.yaml` and update the routerSidecar image subsection to use the local image.
 
 From the sample:
 
