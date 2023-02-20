@@ -21,7 +21,7 @@ Before you begin, make sure the following prerequisites are met:
 * You have prepared the environment to install [`kubeslice-controller`](https://github.com/kubeslice/kubeslice-controller) on the controller cluster
  and [`worker-operator`](https://github.com/kubeslice/worker-operator) on the worker cluster. For more information, see [Prerequisites](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/prerequisites/).
 
-# Build and Deploy router-sidecar on a Kind Cluster 
+# Build and Deploy Router Sidecar on a Kind Cluster 
 
 To download the latest router-sidecar docker hub image, click [here](https://hub.docker.com/r/aveshasystems/kubeslice-router-sidecar).
 
@@ -85,7 +85,7 @@ helm repo update
    docker exec -it kind-control-plane crictl images
    ```
 
-### Deploy on a Cluster
+### Deploy Router Sidecar on a Cluster
 
 Update the chart values file, `yourvaluesfile.yaml` that you have previously created.
 Refer to the [values.yaml](https://github.com/kubeslice/charts/blob/master/charts/kubeslice-worker/values.yaml) to create `yourvaluesfiel.yaml` and update the routerSidecar image subsection to use the local image.
