@@ -8,8 +8,8 @@
 ## Get Started 
 
 Please refer to our documentation on:
-- [Install KubeSlice on cloud clusters](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/installing-kubeslice/installing-the-kubeslice-controller).
-- [Install KubeSlice on kind clusters](https://kubeslice.io/documentation/open-source/0.5.0/tutorials/kind-install-kubeslice-controller).
+- [Install KubeSlice on cloud clusters](https://kubeslice.io/documentation/open-source/0.6.0/getting-started-with-cloud-clusters/installing-kubeslice/installing-the-kubeslice-controller).
+- [Install KubeSlice on kind clusters](https://kubeslice.io/documentation/open-source/0.6.0/tutorials/kind-install-kubeslice-controller).
 
 Try our the example script in [kind-based example](https://github.com/kubeslice/examples/tree/master/kind).
 
@@ -53,7 +53,7 @@ helm repo update
    ```
 
 2. Edit the `VERSION` variable in the Makefile to change the docker tag to be built.
-   Image is set as `docker.io/aveshasystems/router-sidecar:$(VERSION)` in the Makefile. Modify this if required.
+   The image is set as `docker.io/aveshasystems/router-sidecar:$(VERSION)` in the Makefile. Modify this if required.
 
    ```console
    make docker-build
