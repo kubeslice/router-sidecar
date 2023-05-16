@@ -600,15 +600,33 @@ func getSliceRouterDataplaneMode() string {
 
 func BootstrapSliceRouterPod() error {
 	if getSliceRouterDataplaneMode() == SliceRouterDataplaneKernel {
+		// Turn on the forwarding in the kernel. It is an absolute must since the router
+		// needs to forward traffic to app and gw pods.
 		err := sysctl.Set("net.ipv4.ip_forward", "1")
 		if err != nil {
 			logger.GlobalLogger.Fatalf("Failed to enable IP forwarding in the kernel", err)
 			return err
 		}
-		err = sysctl.Set("net.ipv4.fib_multipath_hash_policy", "1")
-		if err != nil {
-			logger.GlobalLogger.Fatalf("failed to set hash policy to L4 for mutipath routes", err)
-			return err
+		// Set the ecmp hash policy to consider L3 and L4 (IP + Port) if possible. This will help with
+		// improving the load balancing between the multi paths.
+		// This configuration might not be available on some operating systems. First check if the config
+		// option is available before attempting to update it.
+		val, err := sysctl.Get("net.ipv4.fib_multipath_hash_policy")
+		if err == nil {
+			// Config option is available. Set the config if it does not have the needed value.
+			if val != "1" {
+			        err = sysctl.Set("net.ipv4.fib_multipath_hash_policy", "1")
+                                if err != nil {
+                                        logger.GlobalLogger.Fatalf("failed to set hash policy to L4 for mutipath routes", err)
+                                        return err
+                                }
+			} else {
+				logger.GlobalLogger.Debugf("Hash policy already set")
+			}
+		} else {
+			// If the config option is not available, log an error message and let the platform use the default method
+			// to load balance.
+			logger.GlobalLogger.Errorf("Hash policy cannot be set on this platform..", err)
 		}
 	}
 	lastRoutingTableReconcileTime = time.Now()
