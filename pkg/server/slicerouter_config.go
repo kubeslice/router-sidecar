@@ -132,93 +132,7 @@ func vl3InjectRouteInKernel(dstIP string, nextHopIPSlice []*netlink.NexthopInfo)
 
 	return nil
 }
-func vl3UpdateEcmpRoute(dstIP string, NsmIPToRemove string) error {
-	logger.GlobalLogger.Info("request to remove nsmIP from routes", "nsmip", NsmIPToRemove)
-	_, dstIPNet, err := net.ParseCIDR(dstIP)
-	if err != nil {
-		return err
-	}
-	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
-	if err != nil {
-		return err
-	}
-	ecmpRoutes := make([]*netlink.NexthopInfo, 0)
-	for _, route := range routes {
-		if route.Dst.String() == dstIPNet.String() {
-			ecmpRoutes = route.MultiPath
-		}
-	}
-	//TODO:(check if this is required?)
-	if len(ecmpRoutes) == 0 {
-		// // if only a single route is present , ecmpRoutes is empty
-		// // should we still search for the route ?
-		// // Get the nsm interface
-		links, err := netlink.LinkList()
-		if err != nil {
-			logger.GlobalLogger.Errorf("Could not get link list, Err: %v", err)
-			return err
-		}
 
-		for _, link := range links {
-			isRouteRemove := false
-			if strings.HasPrefix(link.Attrs().Name, "nsm") {
-				// Get the routes
-				logger.GlobalLogger.Info("link name", "link", link.Attrs().Name, "link index", link.Attrs().Index)
-				routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
-				if err != nil {
-					return err
-				}
-				logger.GlobalLogger.Info("routes list inside", "routes", routes)
-				// range through the routes
-				for _, route := range routes {
-					if route.Gw.String() == NsmIPToRemove {
-						// remove the route
-						err := netlink.RouteDel(&route)
-						if err != nil {
-							logger.GlobalLogger.Errorf("Unable to delete route, Err: %v", err)
-							return err
-						}
-						remoteSubnetRouteMap.Delete(dstIP)
-						// route is removed
-						isRouteRemove = true
-					}
-				}
-			}
-			if isRouteRemove {
-				break
-			}
-		}
-		return nil
-	}
-	updatedMultiPath, _ := updateMultipath(ecmpRoutes, NsmIPToRemove)
-	logger.GlobalLogger.Debug("updatedMultiPath", "updatedMultiPath", updatedMultiPath)
-
-	err = netlink.RouteReplace(&netlink.Route{Dst: dstIPNet, MultiPath: updatedMultiPath})
-	if err != nil {
-		logger.GlobalLogger.Errorf("Unable to replace ecmp routes, Err: %v", err)
-		return err
-	}
-
-	remoteSubnetRouteMap.Store(dstIP, contructArrayFromNextHop(updatedMultiPath))
-	nextHops, _ := remoteSubnetRouteMap.Load(dstIP)
-	logger.GlobalLogger.Debug("remoteSubnetRouteMap", "remoteSubnetRouteMap", nextHops.([]string))
-	return nil
-}
-
-func updateMultipath(nextHopIPs []*netlink.NexthopInfo, gwToRemove string) ([]*netlink.NexthopInfo, int) {
-	index := -1
-	for i, _ := range nextHopIPs {
-		if nextHopIPs[i].Gw.String() == gwToRemove {
-			index = i
-			break
-		}
-	}
-	// if gwToRemove not found
-	if index == -1 {
-		return nextHopIPs, index
-	}
-	return append(nextHopIPs[:index], nextHopIPs[index+1:]...), index
-}
 func vl3GetNsmInterfacesInVpp() ([]*sidecar.ConnectionInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -415,7 +329,7 @@ func vl3ReconcileRoutesInKernel() error {
 		for _, ip := range nextHopList {
 			_, ok := routeMap[remoteSubnet]
 			if !ok || !containsRoute(routeMap[remoteSubnet], ip) {
-				nextHopInfoSlice, err = getNextHopInfoSlice(nextHopList)
+				nextHopInfoSlice, err = getNetlinkNextHopInfo(nextHopList)
 				if err != nil {
 					return false
 				}
@@ -436,7 +350,7 @@ func vl3ReconcileRoutesInKernel() error {
 	return nil
 }
 
-func getNextHopInfoSlice(nextHopIPList []string) ([]*netlink.NexthopInfo, error) {
+func getNetlinkNextHopInfo(nextHopIPList []string) ([]*netlink.NexthopInfo, error) {
 	nextHopIpSlice := []*netlink.NexthopInfo{}
 	for _, nextHopIP := range nextHopIPList {
 		installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
@@ -482,13 +396,25 @@ func sliceRouterReconcileRoutingTable() error {
 	}
 }
 
-func buildNextHopInfo(nextHopIPList []string) []*netlink.NexthopInfo {
-	nextHopIpSlice := []*netlink.NexthopInfo{}
-	for _, nextHop := range nextHopIPList {
-		gwObj := &netlink.NexthopInfo{Gw: net.ParseIP(nextHop)}
-		nextHopIpSlice = append(nextHopIpSlice, gwObj)
+func sliceRouterDeleteRouteToDst(dstIP string) error {
+	_, dstIPNet, err := net.ParseCIDR(dstIP)
+	if err != nil {
+		return err
 	}
-	return nextHopIpSlice
+
+	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	if err != nil {
+		return err
+	}
+
+	for _, route := range routes {
+		if route.Dst.String() == dstIPNet.String() {
+			err := netlink.RouteDel(&route)
+			return err
+		}
+	}
+
+	return errors.New("Route to delete not found")
 }
 
 // Function to inject remote cluster subnet routes into the local slice router.
@@ -506,23 +432,53 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 
 		logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
 	}
+
 	logger.GlobalLogger.Infof("sliceRouterInjectRoute", "remoteSubnetRouteMap", remoteSubnetRouteMap)
 
-	_, routePresent := remoteSubnetRouteMap.Load(remoteSubnet)
-	nextHopInfoSlice, err := getNextHopInfoSlice(nextHopIPList)
+	if len(nextHopIPList) == 0 {
+		// Treat this as a signal to delete the route to the remoteSubnet
+		err := sliceRouterDeleteRouteToDst(remoteSubnet)
+		if err != nil {
+			return err
+		}
+		remoteSubnetRouteMap.Delete(remoteSubnet)
+		return nil
+	}
+
+	installRoute := false
+
+	cachedNextHopValue, routePresent := remoteSubnetRouteMap.Load(remoteSubnet)
+	if !routePresent {
+		installRoute = true
+	} else {
+		cachedNextHopList := cachedNextHopValue.([]string)
+		// Route is present in the cache. Check if the stored nexthop matches with the nexthop received
+		// in the input param.
+		// We reinstall the route if the two lists do not match.
+		if len(cachedNextHopList) != len(nextHopIPList) {
+			installRoute = true
+		} else {
+			for _, nextHopInCache := range cachedNextHopList {
+				if !contains(nextHopIPList, nextHopInCache) {
+					installRoute = true
+					break
+				}
+			}
+		}
+	}
+
+	if !installRoute {
+		return nil
+	}
+
+	// Convert nexthop IPs in string to netlink nexthop info struct
+	netlinkNextHopList, err := getNetlinkNextHopInfo(nextHopIPList)
 	if err != nil {
 		return err
 	}
 
-	for i := 0; i < len(nextHopIPList); i++ {
-
-		nextHopList, _ := remoteSubnetRouteMap.Load(remoteSubnet)
-		if routePresent && checkRouteAdd(nextHopList.([]string), nextHopIPList[i]) {
-			logger.GlobalLogger.Infof("Ignoring route add request. Route already installed. RemoteSubnet: %v, NextHop: %v",
-				remoteSubnet, nextHopIPList[i])
-			continue
-		}
-		if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
+	if getSliceRouterDataplaneMode() == SliceRouterDataplaneVpp {
+		for i := 0; i < len(nextHopIPList); i++ {
 			// If a route was previously installed for the remote subnet then we should
 			// delete it before adding a route with a new nexthop IP.
 			// VPP treats a route modify as a route add operation, creating multiple
@@ -543,15 +499,15 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 			if err != nil {
 				logger.GlobalLogger.Errorf("Failed to inject route in vpp: %v", err)
 			}
-		} else {
-			err := vl3InjectRouteInKernel(remoteSubnet, nextHopInfoSlice)
-			if err != nil {
-				logger.GlobalLogger.Errorf("Failed to inject route in kernel: %v", err)
-				// do not add entry in gloabl map in case of error and continue for next route enteries
-				continue
-			}
+		}
+	} else {
+		err := vl3InjectRouteInKernel(remoteSubnet, netlinkNextHopList)
+		if err != nil {
+			logger.GlobalLogger.Errorf("Failed to inject route in kernel: %v", err)
+			return err
 		}
 	}
+
 	// at the end of for loop , the global map should contain the exact routes that are installed
 	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 	if err != nil {
@@ -566,9 +522,10 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 	remoteSubnetRouteMap.Store(remoteSubnet, contructArrayFromNextHop(ecmpRoutes))
 	return nil
 }
-func checkRouteAdd(nextHopIpList []string, s string) bool {
-	for _, nextHop := range nextHopIpList {
-		if nextHop == s {
+
+func contains(items []string, s string) bool {
+	for _, item := range items {
+		if item == s {
 			return true
 		}
 	}
@@ -615,11 +572,11 @@ func BootstrapSliceRouterPod() error {
 		if err == nil {
 			// Config option is available. Set the config if it does not have the needed value.
 			if val != "1" {
-			        err = sysctl.Set("net.ipv4.fib_multipath_hash_policy", "1")
-                                if err != nil {
-                                        logger.GlobalLogger.Fatalf("failed to set hash policy to L4 for mutipath routes", err)
-                                        return err
-                                }
+				err = sysctl.Set("net.ipv4.fib_multipath_hash_policy", "1")
+				if err != nil {
+					logger.GlobalLogger.Fatalf("failed to set hash policy to L4 for mutipath routes", err)
+					return err
+				}
 			} else {
 				logger.GlobalLogger.Debugf("Hash policy already set")
 			}
