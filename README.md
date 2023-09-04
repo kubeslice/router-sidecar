@@ -8,8 +8,7 @@
 ## Get Started 
 
 Please refer to our documentation on:
-- [Install KubeSlice on cloud clusters](https://kubeslice.io/documentation/open-source/0.6.0/getting-started-with-cloud-clusters/installing-kubeslice/installing-the-kubeslice-controller).
-- [Install KubeSlice on kind clusters](https://kubeslice.io/documentation/open-source/0.6.0/tutorials/kind-install-kubeslice-controller).
+- [Install KubeSlice on cloud clusters](https://kubeslice.io/documentation/open-source/1.1.0/category/install-kubeslice).
 
 Try our the example script in [kind-based example](https://github.com/kubeslice/examples/tree/master/kind).
 
@@ -19,7 +18,7 @@ Before you begin, make sure the following prerequisites are met:
 * A running [`kind`](https://kind.sigs.k8s.io/).
 * [`kubectl`](https://kubernetes.io/docs/tasks/tools/) is installed and configured.
 * You have prepared the environment to install [`kubeslice-controller`](https://github.com/kubeslice/kubeslice-controller) on the controller cluster
- and [`worker-operator`](https://github.com/kubeslice/worker-operator) on the worker cluster. For more information, see [Prerequisites](https://kubeslice.io/documentation/open-source/0.5.0/getting-started-with-cloud-clusters/prerequisites/).
+ and [`worker-operator`](https://github.com/kubeslice/worker-operator) on the worker cluster. For more information, see [Prerequisites](https://kubeslice.io/documentation/open-source/1.1.0/category/prerequisites).
 
 # Build and Deploy Router Sidecar on a Kind Cluster 
 
