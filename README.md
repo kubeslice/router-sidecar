@@ -8,7 +8,8 @@
 ## Get Started 
 
 Please refer to our documentation on:
-- [Install KubeSlice on cloud clusters](https://kubeslice.io/documentation/open-source/1.1.0/category/install-kubeslice).
+- [Get Started on KubeSlice](https://kubeslice.io/documentation/open-source/1.1.0/category/get-started)
+- [Install KubeSlice](https://kubeslice.io/documentation/open-source/1.1.0/category/install-kubeslice)
 
 Try our the example script in [kind-based example](https://github.com/kubeslice/examples/tree/master/kind).
 
