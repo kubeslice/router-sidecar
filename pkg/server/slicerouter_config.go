@@ -207,7 +207,7 @@ func vl3GetNsmInterfacesInKernel() ([]*sidecar.ConnectionInfo, error) {
 		intfMap[route.LinkIndex] = route.Dst.String()
 	}
 
-	logger.GlobalLogger.Infof("intf map: %v", intfMap)
+	logger.GlobalLogger.Debugf("intf map: %v", intfMap)
 
 	connList := []*sidecar.ConnectionInfo{}
 
@@ -220,7 +220,7 @@ func vl3GetNsmInterfacesInKernel() ([]*sidecar.ConnectionInfo, error) {
 				continue
 			}
 			if len(addrList) != 1 {
-				logger.GlobalLogger.Infof("More than one address on nsm intf: %v", addrList)
+				logger.GlobalLogger.Infof("No address or more than one address on nsm intf: %v", addrList)
 				continue
 			}
 
@@ -239,7 +239,7 @@ func vl3GetNsmInterfacesInKernel() ([]*sidecar.ConnectionInfo, error) {
 		}
 	}
 
-	logger.GlobalLogger.Infof("Conn list: %v", connList)
+	logger.GlobalLogger.Debugf("Conn list: %v", connList)
 
 	return connList, nil
 }
@@ -301,6 +301,16 @@ func vl3GetRouteInKernel(dstIP string, nsmIP string) (bool, error) {
 	return false, nil
 }
 
+func printSliceRouteMap() {
+	logger.GlobalLogger.Debugf("Slice Route map:")
+	remoteSubnetRouteMap.Range(func(key, value any) bool {
+		nextHopList := value.([]string)
+		remoteSubnet := key.(string)
+		logger.GlobalLogger.Debugf("remoteSubnet: %v, nexthop: %v", remoteSubnet, nextHopList)
+		return true
+	})
+}
+
 func vl3ReconcileRoutesInKernel() error {
 	// Build a map of existing routes in the vl3
 	installedRoutes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
@@ -318,9 +328,9 @@ func vl3ReconcileRoutesInKernel() error {
 		}
 		routeMap[route.Dst.String()] = append(routeMap[route.Dst.String()], route)
 	}
-	logger.GlobalLogger.Infof("installed Route: %v", installedRoutes)
-	logger.GlobalLogger.Infof("Route map: %v", routeMap)
-	logger.GlobalLogger.Infof("Slice Route map: %v", remoteSubnetRouteMap)
+
+	logger.GlobalLogger.Debugf("Installed routes map: %v", routeMap)
+	printSliceRouteMap()
 
 	nextHopInfoSlice := []*netlink.NexthopInfo{}
 	remoteSubnetRouteMap.Range(func(key, value any) bool {
@@ -343,8 +353,9 @@ func vl3ReconcileRoutesInKernel() error {
 				return false
 			}
 			remoteSubnetRouteMap.Store(remoteSubnet, contructArrayFromNextHop(nextHopInfoSlice))
+		} else {
+			logger.GlobalLogger.Debugf("Skipping installing routes since they are already present!")
 		}
-		logger.GlobalLogger.Errorf("Skipping installing routes since they are already present!")
 		return true
 	})
 	return nil
@@ -430,10 +441,10 @@ func sliceRouterInjectRoute(remoteSubnet string, nextHopIPList []string) error {
 
 		lastRoutingTableReconcileTime = time.Now()
 
-		logger.GlobalLogger.Infof("RT reconciled at: %v", lastRoutingTableReconcileTime)
+		logger.GlobalLogger.Debugf("RT reconciled at: %v", lastRoutingTableReconcileTime)
 	}
 
-	logger.GlobalLogger.Infof("sliceRouterInjectRoute", "remoteSubnetRouteMap", remoteSubnetRouteMap)
+	printSliceRouteMap()
 
 	if len(nextHopIPList) == 0 {
 		// Treat this as a signal to delete the route to the remoteSubnet
@@ -532,10 +543,18 @@ func contains(items []string, s string) bool {
 	return false
 }
 
-func containsRoute(nextHopIpList []netlink.Route, s string) bool {
-	for _, nextHop := range nextHopIpList {
-		if nextHop.Gw.String() == s {
-			return true
+func containsRoute(routeList []netlink.Route, s string) bool {
+	for _, route := range routeList {
+		if len(route.MultiPath) > 0 {
+			for _, path := range route.MultiPath {
+				if path.Gw.String() == s {
+					return true
+				}
+			}
+		} else {
+			if route.Gw.String() == s {
+				return true
+			}
 		}
 	}
 	return false
