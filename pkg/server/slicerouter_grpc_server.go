@@ -45,17 +45,13 @@ func (s *SliceRouterSidecar) UpdateSliceGwConnectionContext(ctx context.Context,
 	if conContext.GetRemoteSliceGwNsmSubnet() == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid Remote Slice Gateway Subnet")
 	}
-	// if len(conContext.GetLocalNsmGwPeerIPList()) == 0 {
-	// 	return nil, status.Errorf(codes.InvalidArgument, "Invalid Local NSM Gateway Peer IPs")
-	// }
-	logger.GlobalLogger.Infof("conContext UpdateSliceGwConnectionContext : %v", conContext)
+
+	// Note: Do not check for the validity of the conContext.GetLocalNsmGwPeerIPList() here. It is being
+	// done in the sliceRouterInjectRoute func.
 
 	err := sliceRouterInjectRoute(conContext.GetRemoteSliceGwNsmSubnet(), conContext.GetLocalNsmGwPeerIPList())
 	if err != nil {
 		logger.GlobalLogger.Errorf("Failed to add route in slice router: %v", err)
-	} else {
-		logger.GlobalLogger.Infof("Added route in slice router: %v via %v",
-			conContext.GetRemoteSliceGwNsmSubnet(), conContext.GetLocalNsmGwPeerIPList())
 	}
 
 	return &sidecar.SidecarResponse{StatusMsg: "Slice Gw Connection Context Updated Successfully"}, nil
@@ -74,12 +70,12 @@ func (s *SliceRouterSidecar) GetSliceRouterClientConnectionInfo(ctx context.Cont
 	if err != nil {
 		return nil, err
 	}
-	logger.GlobalLogger.Infof("Rxed conn list: %v", connInfo)
+
 	clientConnInfo := sidecar.ClientConnectionInfo{
 		Connection: connInfo,
 	}
 
-	logger.GlobalLogger.Infof("sending conn list: %v", clientConnInfo)
+	logger.GlobalLogger.Debugf("sending conn list: %v", clientConnInfo)
 
 	return &clientConnInfo, nil
 }
