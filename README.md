@@ -2,16 +2,16 @@
 
 * The Slice Router is a network service component that provides a virtual L3 IP routing functionality within a cluster for the Slice overlay network.
 * Each slice in a cluster has one slice router with the possibility of a redundant pair option. 
-* The Slice Operator manages the lifecycle of a Slice Router by overseeing the deployment, configuration, continuous monitoring, and management of the Slice Router.
+* The Slice Operator manages the lifecycle of a Slice Router by overseeing deployment, configuration, continuous monitoring, and management of the Slice Router.
 * The Slice Router provides a full mesh network connectivity between the application pods and slice gateway pods in a cluster. 
 
 ## Get Started 
 
 Please refer to our documentation on:
-- [Get Started on KubeSlice](https://kubeslice.io/documentation/open-source/1.3.0/category/get-started)
-- [Install KubeSlice](https://kubeslice.io/documentation/open-source/1.3.0/category/install-kubeslice)
+- [Get Started on KubeSlice](https://kubeslice.io/documentation/open-source/latest/category/get-started)
+- [Install KubeSlice](https://kubeslice.io/documentation/open-source/latest/category/install-kubeslice)
 
-Try our the example script in [kind-based example](https://github.com/kubeslice/examples/tree/master/kind).
+Try our example script in [kind-based example](https://github.com/kubeslice/examples/tree/master/kind).
 
 ### Prerequisites
 Before you begin, make sure the following prerequisites are met:
