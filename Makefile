@@ -24,3 +24,7 @@ chart-deploy:
 	## Usage: make chart-deploy VALUESFILE=[valuesfilename]
 	helm upgrade --install kubeslice-worker -n kubeslice-system avesha/kubeslice-worker -f ${VALUESFILE}
 
+.PHONY: chart-undeploy
+	## undeploy the artifacts using helm
+	helm delete kubeslice-worker -n kubeslice-system
+
