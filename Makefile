@@ -2,6 +2,8 @@
 # Update this value when you upgrade the version of your project.
 VERSION ?= latest-stable
 
+IMG ?= docker.io/aveshasystems/router-sidecar:$(VERSION)
+
 .PHONY: compile
 compile: ## Compile the proto file.
 	protoc -I pkg/sidecar/sidecarpb pkg/sidecar/sidecarpb/router_sidecar.proto --go_out=paths=source_relative:pkg/sidecar/sidecarpb --go-grpc_out=pkg/sidecar/sidecarpb --go-grpc_opt=paths=source_relative
@@ -11,12 +13,14 @@ router-sidecar: ## Build and run router sidecar.
 	go build -race -ldflags "-s -w" -o bin/router-sidecar main.go
 
 .PHONY: docker-build
-docker-build: router-sidecar
-	docker build -t router-sidecar:${VERSION} --build-arg PLATFORM=amd64 . && docker tag router-sidecar:${VERSION} docker.io/aveshasystems/router-sidecar:${VERSION}
+docker-build: ## Build docker image with the manager.
+	docker buildx create --name container --driver=docker-container || true
+	docker build --builder container --platform linux/amd64,linux/arm64 -t ${IMG} .
 
 .PHONY: docker-push
-docker-push:
-	docker push docker.io/aveshasystems/router-sidecar:${VERSION}
+docker-push: ## Push docker image with the manager.
+	docker buildx create --name container --driver=docker-container || true
+	docker build --push --builder container --platform linux/amd64,linux/arm64 -t ${IMG} .
 
 .PHONY: chart-deploy
 chart-deploy:
