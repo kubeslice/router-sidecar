@@ -112,12 +112,12 @@ package runner
 // future.
 
 import (
+	"bytes"
 	"encoding/gob"
 	"fmt"
 	"go/token"
 	"go/types"
 	"io"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"runtime"
@@ -130,8 +130,8 @@ import (
 	"honnef.co/go/tools/analysis/report"
 	"honnef.co/go/tools/config"
 	"honnef.co/go/tools/go/loader"
-	"honnef.co/go/tools/internal/cache"
 	tsync "honnef.co/go/tools/internal/sync"
+	"honnef.co/go/tools/lintcmd/cache"
 	"honnef.co/go/tools/unused"
 
 	"golang.org/x/tools/go/analysis"
@@ -141,6 +141,7 @@ import (
 
 const sanityCheck = false
 
+// Diagnostic is like go/analysis.Diagnostic, but with all token.Pos resolved to token.Position.
 type Diagnostic struct {
 	Position token.Position
 	End      token.Position
@@ -172,7 +173,7 @@ type TextEdit struct {
 // A Result describes the result of analyzing a single package.
 //
 // It holds references to cached diagnostics and directives. They can
-// be loaded on demand with Diagnostics and Directives respectively.
+// be loaded on demand with the Load method.
 type Result struct {
 	Package *loader.PackageSpec
 	Config  config.Config
@@ -181,8 +182,10 @@ type Result struct {
 
 	Failed bool
 	Errors []error
-	// Action results, paths to files
+	// Action results, path to file
 	results string
+	// Results relevant to testing, only set when test mode is enabled, path to file
+	testData string
 }
 
 type SerializedDirective struct {
@@ -223,6 +226,34 @@ func (r Result) Load() (ResultData, error) {
 	}
 	defer f.Close()
 	var out ResultData
+	err = gob.NewDecoder(f).Decode(&out)
+	return out, err
+}
+
+// TestData contains extra information about analysis runs that is only available in test mode.
+type TestData struct {
+	// Facts contains facts produced by analyzers for a package.
+	// Unlike vetx, this list only contains facts specific to this package,
+	// not all facts for the transitive closure of dependencies.
+	Facts []TestFact
+}
+
+// LoadTest returns data relevant to testing.
+// It should only be called if Runner.TestMode was set to true.
+func (r Result) LoadTest() (TestData, error) {
+	if r.Failed {
+		panic("Load called on failed Result")
+	}
+	if r.results == "" {
+		// this package was only a dependency
+		return TestData{}, nil
+	}
+	f, err := os.Open(r.testData)
+	if err != nil {
+		return TestData{}, fmt.Errorf("failed loading test data: %w", err)
+	}
+	defer f.Close()
+	var out TestData
 	err = gob.NewDecoder(f).Decode(&out)
 	return out, err
 }
@@ -269,17 +300,16 @@ type packageAction struct {
 	baseAction
 
 	// Action description
-
 	Package   *loader.PackageSpec
 	factsOnly bool
 	hash      cache.ActionID
 
 	// Action results
-
-	cfg     config.Config
-	vetx    string
-	results string
-	skipped bool
+	cfg      config.Config
+	vetx     string
+	results  string
+	testData string
+	skipped  bool
 }
 
 func (act *packageAction) String() string {
@@ -288,6 +318,9 @@ func (act *packageAction) String() string {
 
 type objectFact struct {
 	fact analysis.Fact
+	// TODO(dh): why do we store the objectpath when producing the
+	// fact? Is it just for the sanity checking, which compares the
+	// stored path with a path recomputed from objectFactKey.Obj?
 	path objectpath.Path
 }
 
@@ -305,6 +338,14 @@ type gobFact struct {
 	PkgPath string
 	ObjPath string
 	Fact    analysis.Fact
+}
+
+// TestFact is a serialization of facts that is specific to the test mode.
+type TestFact struct {
+	ObjectName string
+	Position   token.Position
+	FactString string
+	Analyzer   string
 }
 
 // analyzerAction describes the act of analyzing a package with a
@@ -339,6 +380,8 @@ type Runner struct {
 	// if GoVersion == "module", and we couldn't determine the
 	// module's Go version, use this as the fallback
 	FallbackGoVersion string
+	// If set to true, Runner will populate results with data relevant to testing analyzers
+	TestMode bool
 
 	// GoVersion might be "module"; actualGoVersion contains the resolved version
 	actualGoVersion string
@@ -524,8 +567,11 @@ func (r *subrunner) do(act action) error {
 	ids = append(ids, cache.Subkey(a.hash, "vetx"))
 	if !a.factsOnly {
 		ids = append(ids, cache.Subkey(a.hash, "results"))
+		if r.TestMode {
+			ids = append(ids, cache.Subkey(a.hash, "testdata"))
+		}
 	}
-	if err := getCachedFiles(r.cache, ids, []*string{&a.vetx, &a.results}); err != nil {
+	if err := getCachedFiles(r.cache, ids, []*string{&a.vetx, &a.results, &a.testData}); err != nil {
 		result, err := r.doUncached(a)
 		if err != nil {
 			return err
@@ -546,13 +592,8 @@ func (r *subrunner) do(act action) error {
 		// change to a package requires re-analyzing all dependents,
 		// even if the vetx data stayed the same. See also the note at
 		// the top of loader/hash.go.
-		tf, err := ioutil.TempFile("", "staticcheck")
-		if err != nil {
-			return err
-		}
-		defer tf.Close()
-		os.Remove(tf.Name())
 
+		tf := &bytes.Buffer{}
 		enc := gob.NewEncoder(tf)
 		for _, gf := range result.facts {
 			if err := enc.Encode(gf); err != nil {
@@ -560,10 +601,7 @@ func (r *subrunner) do(act action) error {
 			}
 		}
 
-		if _, err := tf.Seek(0, io.SeekStart); err != nil {
-			return err
-		}
-		a.vetx, err = r.writeCacheReader(a, "vetx", tf)
+		a.vetx, err = r.writeCacheReader(a, "vetx", bytes.NewReader(tf.Bytes()))
 		if err != nil {
 			return err
 		}
@@ -583,6 +621,16 @@ func (r *subrunner) do(act action) error {
 		a.results, err = r.writeCacheGob(a, "results", out)
 		if err != nil {
 			return err
+		}
+
+		if r.TestMode {
+			out := TestData{
+				Facts: result.testFacts,
+			}
+			a.testData, err = r.writeCacheGob(a, "testdata", out)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -608,7 +656,7 @@ func (r *Runner) writeCacheReader(a *packageAction, kind string, rs io.ReadSeeke
 }
 
 func (r *Runner) writeCacheGob(a *packageAction, kind string, data interface{}) (string, error) {
-	f, err := ioutil.TempFile("", "staticcheck")
+	f, err := os.CreateTemp("", "staticcheck")
 	if err != nil {
 		return "", err
 	}
@@ -630,6 +678,9 @@ type packageActionResult struct {
 	dirs    []lint.Directive
 	lpkg    *loader.Package
 	skipped bool
+
+	// Only set when using test mode
+	testFacts []TestFact
 }
 
 func (r *subrunner) doUncached(a *packageAction) (packageActionResult, error) {
@@ -666,11 +717,12 @@ func (r *subrunner) doUncached(a *packageAction) (packageActionResult, error) {
 	res, err := r.runAnalyzers(a, pkg)
 
 	return packageActionResult{
-		facts:  res.facts,
-		diags:  res.diagnostics,
-		unused: res.unused,
-		dirs:   dirs,
-		lpkg:   pkg,
+		facts:     res.facts,
+		testFacts: res.testFacts,
+		diags:     res.diagnostics,
+		unused:    res.unused,
+		dirs:      dirs,
+		lpkg:      pkg,
 	}, err
 }
 
@@ -947,6 +999,9 @@ type analysisResult struct {
 	facts       []gobFact
 	diagnostics []Diagnostic
 	unused      unused.SerializedResult
+
+	// Only set when using test mode
+	testFacts []TestFact
 }
 
 func (r *subrunner) runAnalyzers(pkgAct *packageAction, pkg *loader.Package) (analysisResult, error) {
@@ -1010,7 +1065,7 @@ func (r *subrunner) runAnalyzers(pkgAct *packageAction, pkg *loader.Package) (an
 
 	var unusedResult unused.SerializedResult
 	for _, a := range all {
-		if a != root && a.Analyzer.Name == "U1000" {
+		if a != root && a.Analyzer.Name == "U1000" && !a.failed {
 			// TODO(dh): figure out a clean abstraction, instead of
 			// special-casing U1000.
 			unusedResult = unused.Serialize(a.Pass, a.Result.(unused.Result), pkg.Fset)
@@ -1025,6 +1080,7 @@ func (r *subrunner) runAnalyzers(pkgAct *packageAction, pkg *loader.Package) (an
 	}
 
 	// OPT(dh): cull objects not reachable via the exported closure
+	var testFacts []TestFact
 	gobFacts := make([]gobFact, 0, len(depObjFacts)+len(depPkgFacts))
 	for key, fact := range depObjFacts {
 		if fact.path == "" {
@@ -1043,12 +1099,37 @@ func (r *subrunner) runAnalyzers(pkgAct *packageAction, pkg *loader.Package) (an
 		}
 		gobFacts = append(gobFacts, gf)
 	}
+
 	for key, fact := range depPkgFacts {
 		gf := gobFact{
 			PkgPath: key.Pkg.Path(),
 			Fact:    fact,
 		}
 		gobFacts = append(gobFacts, gf)
+	}
+
+	if r.TestMode {
+		for _, a := range all {
+			for key, fact := range a.ObjectFacts {
+				tgf := TestFact{
+					ObjectName: key.Obj.Name(),
+					Position:   pkg.Fset.Position(key.Obj.Pos()),
+					FactString: fmt.Sprint(fact.fact),
+					Analyzer:   a.Analyzer.Name,
+				}
+				testFacts = append(testFacts, tgf)
+			}
+
+			for _, fact := range a.PackageFacts {
+				tgf := TestFact{
+					ObjectName: "",
+					Position:   pkg.Fset.Position(pkg.Syntax[0].Pos()),
+					FactString: fmt.Sprint(fact),
+					Analyzer:   a.Analyzer.Name,
+				}
+				testFacts = append(testFacts, tgf)
+			}
+		}
 	}
 
 	var diags []Diagnostic
@@ -1058,6 +1139,7 @@ func (r *subrunner) runAnalyzers(pkgAct *packageAction, pkg *loader.Package) (an
 	}
 	return analysisResult{
 		facts:       gobFacts,
+		testFacts:   testFacts,
 		diagnostics: diags,
 		unused:      unusedResult,
 	}, nil
@@ -1191,13 +1273,14 @@ func (r *Runner) Run(cfg *packages.Config, analyzers []*analysis.Analyzer, patte
 			continue
 		}
 		out = append(out, Result{
-			Package: item.Package,
-			Config:  item.cfg,
-			Initial: !item.factsOnly,
-			Skipped: item.skipped,
-			Failed:  item.failed,
-			Errors:  item.errors,
-			results: item.results,
+			Package:  item.Package,
+			Config:   item.cfg,
+			Initial:  !item.factsOnly,
+			Skipped:  item.skipped,
+			Failed:   item.failed,
+			Errors:   item.errors,
+			results:  item.results,
+			testData: item.testData,
 		})
 	}
 	return out, nil
