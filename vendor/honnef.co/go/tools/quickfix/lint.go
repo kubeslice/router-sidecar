@@ -3,9 +3,9 @@ package quickfix
 import (
 	"fmt"
 	"go/ast"
+	"go/constant"
 	"go/token"
 	"go/types"
-	"strconv"
 	"strings"
 
 	"honnef.co/go/tools/analysis/code"
@@ -13,6 +13,7 @@ import (
 	"honnef.co/go/tools/analysis/report"
 	"honnef.co/go/tools/go/ast/astutil"
 	"honnef.co/go/tools/go/types/typeutil"
+	"honnef.co/go/tools/knowledge"
 	"honnef.co/go/tools/pattern"
 
 	"golang.org/x/tools/go/analysis"
@@ -164,8 +165,16 @@ func CheckDeMorgan(pass *analysis.Pass) (interface{}, error) {
 
 		n := negateDeMorgan(expr, false)
 		nr := negateDeMorgan(expr, true)
-		ns := simplifyParentheses(astutil.CopyExpr(n))
-		nrs := simplifyParentheses(astutil.CopyExpr(nr))
+		nc, ok := astutil.CopyExpr(n)
+		if !ok {
+			return
+		}
+		ns := simplifyParentheses(nc)
+		nrc, ok := astutil.CopyExpr(nr)
+		if !ok {
+			return
+		}
+		nrs := simplifyParentheses(nrc)
 
 		var bn, bnr, bns, bnrs string
 		switch parent := stack[len(stack)-2]; parent.(type) {
@@ -191,14 +200,14 @@ func CheckDeMorgan(pass *analysis.Pass) (interface{}, error) {
 		// simplifyParentheses might have rebalanced trees without
 		// affecting the rendered form.
 		var fixes []analysis.SuggestedFix
-		fixes = append(fixes, edit.Fix("Apply De Morgan's law", edit.ReplaceWithString(pass.Fset, node, bn)))
+		fixes = append(fixes, edit.Fix("Apply De Morgan's law", edit.ReplaceWithString(node, bn)))
 		if bn != bns {
-			fixes = append(fixes, edit.Fix("Apply De Morgan's law & simplify", edit.ReplaceWithString(pass.Fset, node, bns)))
+			fixes = append(fixes, edit.Fix("Apply De Morgan's law & simplify", edit.ReplaceWithString(node, bns)))
 		}
 		if bn != bnr {
-			fixes = append(fixes, edit.Fix("Apply De Morgan's law recursively", edit.ReplaceWithString(pass.Fset, node, bnr)))
+			fixes = append(fixes, edit.Fix("Apply De Morgan's law recursively", edit.ReplaceWithString(node, bnr)))
 			if bnr != bnrs {
-				fixes = append(fixes, edit.Fix("Apply De Morgan's law recursively & simplify", edit.ReplaceWithString(pass.Fset, node, bnrs)))
+				fixes = append(fixes, edit.Fix("Apply De Morgan's law recursively & simplify", edit.ReplaceWithString(node, bnrs)))
 			}
 		}
 
@@ -289,10 +298,10 @@ func CheckTaglessSwitch(pass *analysis.Pass) (interface{}, error) {
 				values = append(values, report.Render(pass, y))
 			}
 
-			edits = append(edits, edit.ReplaceWithString(pass.Fset, edit.Range{stmt.List[0].Pos(), stmt.Colon}, strings.Join(values, ", ")))
+			edits = append(edits, edit.ReplaceWithString(edit.Range{stmt.List[0].Pos(), stmt.Colon}, strings.Join(values, ", ")))
 		}
 		pos := swtch.Switch + token.Pos(len("switch"))
-		edits = append(edits, edit.ReplaceWithString(pass.Fset, edit.Range{pos, pos}, " "+report.Render(pass, x)))
+		edits = append(edits, edit.ReplaceWithString(edit.Range{pos, pos}, " "+report.Render(pass, x)))
 		report.Report(pass, swtch, fmt.Sprintf("could use tagged switch on %s", report.Render(pass, x)),
 			report.Fixes(edit.Fix("Replace with tagged switch", edits...)))
 	}
@@ -389,14 +398,14 @@ func CheckIfElseToSwitch(pass *analysis.Pass) (interface{}, error) {
 			}
 			sconds := strings.Join(conds, ", ")
 			edits = append(edits,
-				edit.ReplaceWithString(pass.Fset, edit.Range{item.If, item.Body.Lbrace + 1}, "case "+sconds+":"),
+				edit.ReplaceWithString(edit.Range{item.If, item.Body.Lbrace + 1}, "case "+sconds+":"),
 				edit.Delete(edit.Range{item.Body.Rbrace, end}))
 
 			switch els := item.Else.(type) {
 			case *ast.IfStmt:
 				item = els
 			case *ast.BlockStmt:
-				edits = append(edits, edit.ReplaceWithString(pass.Fset, edit.Range{els.Lbrace, els.Lbrace + 1}, "default:"))
+				edits = append(edits, edit.ReplaceWithString(edit.Range{els.Lbrace, els.Lbrace + 1}, "default:"))
 				item = nil
 			case nil:
 				item = nil
@@ -405,7 +414,7 @@ func CheckIfElseToSwitch(pass *analysis.Pass) (interface{}, error) {
 			}
 		}
 		// FIXME this forces the first case to begin in column 0. try to fix the indentation
-		edits = append(edits, edit.ReplaceWithString(pass.Fset, edit.Range{ifstmt.If, ifstmt.If}, fmt.Sprintf("switch %s {\n", report.Render(pass, x))))
+		edits = append(edits, edit.ReplaceWithString(edit.Range{ifstmt.If, ifstmt.If}, fmt.Sprintf("switch %s {\n", report.Render(pass, x))))
 		report.Report(pass, ifstmt, fmt.Sprintf("could use tagged switch on %s", report.Render(pass, x)),
 			report.Fixes(edit.Fix("Replace with tagged switch", edits...)),
 			report.ShortRange())
@@ -415,12 +424,12 @@ func CheckIfElseToSwitch(pass *analysis.Pass) (interface{}, error) {
 }
 
 var stringsReplaceAllQ = pattern.MustParse(`(Or
-	(CallExpr fn@(Function "strings.Replace") [_ _ _ lit@(UnaryExpr "-" (BasicLit "INT" "1"))])
-	(CallExpr fn@(Function "strings.SplitN") [_ _ lit@(UnaryExpr "-" (BasicLit "INT" "1"))])
-	(CallExpr fn@(Function "strings.SplitAfterN") [_ _ lit@(UnaryExpr "-" (BasicLit "INT" "1"))])
-	(CallExpr fn@(Function "bytes.Replace") [_ _ _ lit@(UnaryExpr "-" (BasicLit "INT" "1"))])
-	(CallExpr fn@(Function "bytes.SplitN") [_ _ lit@(UnaryExpr "-" (BasicLit "INT" "1"))])
-	(CallExpr fn@(Function "bytes.SplitAfterN") [_ _ lit@(UnaryExpr "-" (BasicLit "INT" "1"))]))`)
+	(CallExpr fn@(Symbol "strings.Replace") [_ _ _ lit@(IntegerLiteral "-1")])
+	(CallExpr fn@(Symbol "strings.SplitN") [_ _ lit@(IntegerLiteral "-1")])
+	(CallExpr fn@(Symbol "strings.SplitAfterN") [_ _ lit@(IntegerLiteral "-1")])
+	(CallExpr fn@(Symbol "bytes.Replace") [_ _ _ lit@(IntegerLiteral "-1")])
+	(CallExpr fn@(Symbol "bytes.SplitN") [_ _ lit@(IntegerLiteral "-1")])
+	(CallExpr fn@(Symbol "bytes.SplitAfterN") [_ _ lit@(IntegerLiteral "-1")]))`)
 
 func CheckStringsReplaceAll(pass *analysis.Pass) (interface{}, error) {
 	// XXX respect minimum Go version
@@ -454,14 +463,14 @@ func CheckStringsReplaceAll(pass *analysis.Pass) (interface{}, error) {
 		call := node.(*ast.CallExpr)
 		report.Report(pass, call.Fun, fmt.Sprintf("could use %s instead", replacement),
 			report.Fixes(edit.Fix(fmt.Sprintf("Use %s instead", replacement),
-				edit.ReplaceWithString(pass.Fset, call.Fun, replacement),
+				edit.ReplaceWithString(call.Fun, replacement),
 				edit.Delete(matcher.State["lit"].(ast.Node)))))
 	}
 	code.Preorder(pass, fn, (*ast.CallExpr)(nil))
 	return nil, nil
 }
 
-var mathPowQ = pattern.MustParse(`(CallExpr (Function "math.Pow") [x n@(BasicLit "INT" _)])`)
+var mathPowQ = pattern.MustParse(`(CallExpr (Symbol "math.Pow") [x (IntegerLiteral n)])`)
 
 func CheckMathPow(pass *analysis.Pass) (interface{}, error) {
 	fn := func(node ast.Node) {
@@ -474,7 +483,10 @@ func CheckMathPow(pass *analysis.Pass) (interface{}, error) {
 		if code.MayHaveSideEffects(pass, x, nil) {
 			return
 		}
-		n, _ := strconv.ParseInt(matcher.State["n"].(*ast.BasicLit).Value, 10, 64)
+		n, ok := constant.Int64Val(constant.ToInt(matcher.State["n"].(types.TypeAndValue).Value))
+		if !ok {
+			return
+		}
 
 		needConversion := false
 		if T, ok := pass.TypesInfo.Types[x]; ok && T.Value != nil {
@@ -519,7 +531,11 @@ func CheckMathPow(pass *analysis.Pass) (interface{}, error) {
 				}
 			}
 
-			replacement = simplifyParentheses(astutil.CopyExpr(r))
+			rc, ok := astutil.CopyExpr(r)
+			if !ok {
+				return
+			}
+			replacement = simplifyParentheses(rc)
 		default:
 			return
 		}
@@ -554,7 +570,7 @@ func CheckForLoopIfBreak(pass *analysis.Pass) (interface{}, error) {
 		// is followed by a comment, or Windows newlines.
 		report.Report(pass, m.State["if"].(ast.Node), "could lift into loop condition",
 			report.Fixes(edit.Fix("Lift into loop condition",
-				edit.ReplaceWithString(pass.Fset, edit.Range{pos, pos}, " "+report.Render(pass, r)),
+				edit.ReplaceWithString(edit.Range{pos, pos}, " "+report.Render(pass, r)),
 				edit.Delete(m.State["if"].(ast.Node)))))
 	}
 	code.Preorder(pass, fn, (*ast.ForStmt)(nil))
@@ -734,7 +750,7 @@ func CheckExplicitEmbeddedSelector(pass *analysis.Pass) (interface{}, error) {
 		// Offer to simplify all selector expressions at once
 		if len(edits) > 1 {
 			// Hack to prevent gopls from applying the Unnecessary tag to the diagnostic. It applies the tag when all edits are deletions.
-			edits = append(edits, edit.ReplaceWithString(pass.Fset, edit.Range{node.Pos(), node.Pos()}, ""))
+			edits = append(edits, edit.ReplaceWithString(edit.Range{node.Pos(), node.Pos()}, ""))
 			report.Report(pass, node, "could simplify selectors", report.Fixes(edit.Fix("Remove all embedded fields from selector", edits...)))
 		}
 	}
@@ -757,7 +773,7 @@ func CheckTimeEquality(pass *analysis.Pass) (interface{}, error) {
 		}
 		report.Report(pass, node, "probably want to use time.Time.Equal instead",
 			report.Fixes(edit.Fix("Use time.Time.Equal method",
-				edit.ReplaceWithPattern(pass, timeEqualR, pattern.State{"lhs": expr.X, "rhs": expr.Y}, node))))
+				edit.ReplaceWithPattern(pass.Fset, node, timeEqualR, pattern.State{"lhs": expr.X, "rhs": expr.Y}))))
 	}
 	code.Preorder(pass, fn, (*ast.BinaryExpr)(nil))
 	return nil, nil
@@ -766,7 +782,7 @@ func CheckTimeEquality(pass *analysis.Pass) (interface{}, error) {
 var byteSlicePrintingQ = pattern.MustParse(`
 	(Or
 		(CallExpr
-			(Function (Or
+			(Symbol (Or
 				"fmt.Print"
 				"fmt.Println"
 				"fmt.Sprint"
@@ -784,36 +800,13 @@ var byteSlicePrintingQ = pattern.MustParse(`
 				"(*log.Logger).Print"
 				"(*log.Logger).Println")) args)
 
-		(CallExpr (Function (Or
+		(CallExpr (Symbol (Or
 			"fmt.Fprint"
 			"fmt.Fprintln")) _:args))`)
 
 var byteSlicePrintingR = pattern.MustParse(`(CallExpr (Ident "string") [arg])`)
 
 func CheckByteSlicePrinting(pass *analysis.Pass) (interface{}, error) {
-	isStringer := func(T types.Type, ms *types.MethodSet) bool {
-		sel := ms.Lookup(nil, "String")
-		if sel == nil {
-			return false
-		}
-		fn, ok := sel.Obj().(*types.Func)
-		if !ok {
-			// should be unreachable
-			return false
-		}
-		sig := fn.Type().(*types.Signature)
-		if sig.Params().Len() != 0 {
-			return false
-		}
-		if sig.Results().Len() != 1 {
-			return false
-		}
-		if !typeutil.IsType(sig.Results().At(0).Type(), "string") {
-			return false
-		}
-		return true
-	}
-
 	fn := func(node ast.Node) {
 		m, ok := code.Match(pass, byteSlicePrintingQ, node)
 		if !ok {
@@ -823,16 +816,91 @@ func CheckByteSlicePrinting(pass *analysis.Pass) (interface{}, error) {
 		for _, arg := range args {
 			T := pass.TypesInfo.TypeOf(arg)
 			if typeutil.IsType(T.Underlying(), "[]byte") {
-				ms := types.NewMethodSet(T)
-
 				// don't convert arguments that implement fmt.Stringer
-				if isStringer(T, ms) {
+				if types.Implements(T, knowledge.Interfaces["fmt.Stringer"]) {
 					continue
 				}
 
-				fix := edit.Fix("Convert argument to string", edit.ReplaceWithPattern(pass, byteSlicePrintingR, pattern.State{"arg": arg}, arg))
+				fix := edit.Fix("Convert argument to string", edit.ReplaceWithPattern(pass.Fset, arg, byteSlicePrintingR, pattern.State{"arg": arg}))
 				report.Report(pass, arg, "could convert argument to string", report.Fixes(fix))
 			}
+		}
+	}
+	code.Preorder(pass, fn, (*ast.CallExpr)(nil))
+	return nil, nil
+}
+
+var (
+	checkWriteBytesSprintfQ = pattern.MustParse(`
+	(CallExpr
+		(SelectorExpr recv (Ident "Write"))
+		(CallExpr (ArrayType nil (Ident "byte"))
+			(CallExpr
+				fn@(Or
+					(Symbol "fmt.Sprint")
+					(Symbol "fmt.Sprintf")
+					(Symbol "fmt.Sprintln"))
+				args)
+	))`)
+
+	checkWriteStringSprintfQ = pattern.MustParse(`
+	(CallExpr
+		(SelectorExpr recv (Ident "WriteString"))
+		(CallExpr
+			fn@(Or
+				(Symbol "fmt.Sprint")
+				(Symbol "fmt.Sprintf")
+				(Symbol "fmt.Sprintln"))
+			args))`)
+)
+
+func CheckWriteBytesSprintf(pass *analysis.Pass) (interface{}, error) {
+	fn := func(node ast.Node) {
+		if m, ok := code.Match(pass, checkWriteBytesSprintfQ, node); ok {
+			recv := m.State["recv"].(ast.Expr)
+			recvT := pass.TypesInfo.TypeOf(recv)
+			if !types.Implements(recvT, knowledge.Interfaces["io.Writer"]) {
+				return
+			}
+
+			name := m.State["fn"].(*types.Func).Name()
+			newName := "F" + strings.TrimPrefix(name, "S")
+			msg := fmt.Sprintf("Use fmt.%s(...) instead of Write([]byte(fmt.%s(...)))", newName, name)
+
+			args := m.State["args"].([]ast.Expr)
+			fix := edit.Fix(msg, edit.ReplaceWithNode(pass.Fset, node, &ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X:   ast.NewIdent("fmt"),
+					Sel: ast.NewIdent(newName),
+				},
+				Args: append([]ast.Expr{recv}, args...),
+			}))
+			report.Report(pass, node, msg, report.Fixes(fix))
+		} else if m, ok := code.Match(pass, checkWriteStringSprintfQ, node); ok {
+			recv := m.State["recv"].(ast.Expr)
+			recvT := pass.TypesInfo.TypeOf(recv)
+			if !types.Implements(recvT, knowledge.Interfaces["io.StringWriter"]) {
+				return
+			}
+			// The type needs to implement both StringWriter and Writer.
+			// If it doesn't implement Writer, then we cannot pass it to fmt.Fprint.
+			if !types.Implements(recvT, knowledge.Interfaces["io.Writer"]) {
+				return
+			}
+
+			name := m.State["fn"].(*types.Func).Name()
+			newName := "F" + strings.TrimPrefix(name, "S")
+			msg := fmt.Sprintf("Use fmt.%s(...) instead of WriteString(fmt.%s(...))", newName, name)
+
+			args := m.State["args"].([]ast.Expr)
+			fix := edit.Fix(msg, edit.ReplaceWithNode(pass.Fset, node, &ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X:   ast.NewIdent("fmt"),
+					Sel: ast.NewIdent(newName),
+				},
+				Args: append([]ast.Expr{recv}, args...),
+			}))
+			report.Report(pass, node, msg, report.Fixes(fix))
 		}
 	}
 	code.Preorder(pass, fn, (*ast.CallExpr)(nil))
