@@ -33,13 +33,14 @@ COPY . .
 RUN go mod download && \
     CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o bin/kubeslice-router-sidecar main.go
 
-# Build reduced image from base alpine
-FROM alpine:3.21
+# Build reduced image from distroless-base image
+FROM gcr.io/distroless/static
 
 # Add the necessary pakages:
 # tc - is needed for traffic control and shaping on the sidecar.  it is part of the iproute2
-RUN apk add --no-cache ca-certificates &&\
-    apk add iproute2
+# Copy the built router-sidecar binary from the builder stage to the final image
+COPY --from=gobuilder /kubeslice/kubeslice-router-sidecar/bin/kubeslice-router-sidecar /router-sidecar
+ENTRYPOINT ["/router-sidecar"]
 
 # Run the sidecar binary.
 WORKDIR /kubeslice
