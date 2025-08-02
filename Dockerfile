@@ -33,7 +33,7 @@ COPY . .
 RUN go mod download && \
     CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o bin/kubeslice-router-sidecar main.go
 
-# Build reduced image from base alpine
+# Build reduced image from distroless-base image
 FROM gcr.io/distroless/static
 
 # Add the necessary pakages:
