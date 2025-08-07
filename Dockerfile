@@ -41,11 +41,18 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates &&\
     apk add iproute2
 
+# Create non-root user and group
+RUN addgroup -S kubeslice && adduser -S -G kubeslice kubeslice
+
 # Run the sidecar binary.
 WORKDIR /kubeslice
 
-# Copy our static executable.
-COPY --from=gobuilder /kubeslice/kubeslice-router-sidecar/bin/kubeslice-router-sidecar .
+# Copy binary and set ownership
+COPY --from=gobuilder --chown=kubeslice:kubeslice /kubeslice/kubeslice-router-sidecar/bin/kubeslice-router-sidecar .
+
+# Switch to non-root user
+USER kubeslice
+
 EXPOSE 5000
 EXPOSE 8080
 # Or could be CMD
