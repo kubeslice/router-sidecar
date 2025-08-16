@@ -17,36 +17,44 @@
 #limitations under the License.
 ##########################################################
 
-FROM golang:1.24-alpine3.21 AS gobuilder
-
+# Build stage
+FROM golang:1.24-bookworm AS gobuilder
 ARG TARGETOS
 ARG TARGETARCH
-
-# Install git.
+# Install git and build tools
 # Git is required for fetching the dependencies.
-RUN apk update && apk add --no-cache git make build-base
-
+RUN apt-get update && apt-get install -y git make build-essential && \
+    rm -rf /var/lib/apt/lists/*
 # Set the Go source path
 WORKDIR /kubeslice/kubeslice-router-sidecar/
+
+# For better caching of layers
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
 # Build the binary.
-RUN go mod download && \
-    CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o bin/kubeslice-router-sidecar main.go
+RUN CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o bin/kubeslice-router-sidecar main.go
 
-# Build reduced image from base alpine
-FROM alpine:3.21
+# Tools stage - iproute2 tools and dependencies from Debian
+FROM debian:12-slim AS tools
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends iproute2 && \
+    cp /sbin/tc /tmp/tc && \
+    mkdir -p /tmp/lib && \
+    # Use ldd to find shared library dependencies and copy them
+    ldd /sbin/tc | awk '/=>/ { print $3 }' | xargs -I {} cp {} /tmp/lib/ && \
+    # Clean up
+    rm -rf /var/lib/apt/lists/*
 
-# Add the necessary pakages:
-# tc - is needed for traffic control and shaping on the sidecar.  it is part of the iproute2
-RUN apk add --no-cache ca-certificates &&\
-    apk add iproute2
-
-# Run the sidecar binary.
-WORKDIR /kubeslice
-
-# Copy our static executable.
-COPY --from=gobuilder /kubeslice/kubeslice-router-sidecar/bin/kubeslice-router-sidecar .
-EXPOSE 5000
-EXPOSE 8080
-# Or could be CMD
-ENTRYPOINT ["./kubeslice-router-sidecar"]
+# Final stage - distroless with pinned tag
+FROM gcr.io/distroless/cc-debian12@sha256:00cc20b928afcc8296b72525fa68f39ab332f758c4f2a9e8d90845d3e06f1dc4
+# Copy the tc binary and its dependencies
+COPY --from=tools /tmp/tc /usr/sbin/tc
+COPY --from=tools /tmp/lib/* /lib/x86_64-linux-gnu/
+# Copy static executable
+COPY --from=gobuilder /kubeslice/kubeslice-router-sidecar/bin/kubeslice-router-sidecar /kubeslice-router-sidecar
+WORKDIR /
+EXPOSE 5000 8080
+USER nonroot:nonroot
+ENTRYPOINT ["/kubeslice-router-sidecar"]
